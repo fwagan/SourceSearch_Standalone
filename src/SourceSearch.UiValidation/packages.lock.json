@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "J2N": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "Vooz1wbnnqWuS+u93tADXK5Owxo8vLJhSrZ9Ac+KpgDF3GJq9TybXXTF1TFcWILgEtRThc8AOBENEzB0TQH1JA=="
+      },
+      "Lucene.Net": {
+        "type": "Transitive",
+        "resolved": "4.8.0-beta00018",
+        "contentHash": "iBkkpkDbAHjpZ0dnukFnWnjxSNmsRHOSxrYBBKbtcYJZ8PQRrKsqGGyNm8xmh4ORvsJ1WM7i5A9whiyA8WhNrQ==",
+        "dependencies": {
+          "J2N": "[2.1.0, 3.0.0)",
+          "Microsoft.Extensions.Configuration.Abstractions": "8.0.0"
+        }
+      },
+      "Microsoft.Extensions.Configuration.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "3lE/iLSutpgX1CC0NOW70FJoGARRHbyKmG7dc0klnUZ9Dd9hS6N/POPWhKhMLCEuNN5nXEY5agmlFtH562vqhQ==",
+        "dependencies": {
+          "Microsoft.Extensions.Primitives": "8.0.0"
+        }
+      },
+      "Microsoft.Extensions.Primitives": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "bXJEZrW9ny8vjMF1JV253WeLhpEVzFo1lyaZu1vQ4ZxWUlVvknZ/+ftFgVheLubb4eZPSwwxBeqS1JkCOjxd8g=="
+      },
+      "sourcesearch.core": {
+        "type": "Project",
+        "dependencies": {
+          "Lucene.Net": "[4.8.0-beta00018, )"
+        }
+      },
+      "sourcesearch.desktop": {
+        "type": "Project",
+        "dependencies": {
+          "SourceSearch.Core": "[1.0.0, )",
+          "SourceSearch.Presentation": "[1.0.0, )"
+        }
+      },
+      "sourcesearch.presentation": {
+        "type": "Project",
+        "dependencies": {
+          "SourceSearch.Core": "[1.0.0, )"
+        }
+      },
+      "sourcesearch.validation": {
+        "type": "Project",
+        "dependencies": {
+          "SourceSearch.Core": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}

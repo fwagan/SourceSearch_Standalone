@@ -8,10 +8,10 @@ $workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $workspace
 try {
     if (-not $NoBuild) {
-        dotnet build src/SourceSearch.Desktop -c Release
+        dotnet build src/SourceSearch.UiValidation -c Release
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
-    if (-not $Executable) { $Executable = Join-Path $workspace 'src/SourceSearch.Desktop/bin/Release/net10.0-windows/SourceSearch.Desktop.exe' }
+    if (-not $Executable) { $Executable = Join-Path $workspace 'src/SourceSearch.UiValidation/bin/Release/net10.0-windows/SourceSearch.UiValidation.exe' }
     $reportDir = Join-Path $workspace "artifacts/reports/$Preset"
     $snapshot = (Get-Content -LiteralPath (Join-Path $reportDir 'build.json') -Raw | ConvertFrom-Json).SnapshotPath
     $queries = Join-Path $reportDir 'queries.json'

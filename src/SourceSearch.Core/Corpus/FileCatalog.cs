@@ -19,11 +19,14 @@ public sealed class FileCatalog : IFileCatalog
         var allowedDirectories = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase) { [root] = true };
 
         bool Within(string path, string parent) => IsWithin(path, parent);
-        bool AllowedDirectory(string path)
+        bool AllowedDirectory(string path, bool allowMissing = false)
         {
             if (allowedDirectories.TryGetValue(path, out bool allowed)) return allowed;
             if (!Within(path, root) || excluded.Any(e => Within(path, e)) || ExcludedDirectories.Contains(Path.GetFileName(path))) return allowedDirectories[path] = false;
-            try { return allowedDirectories[path] = !File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint) && AllowedDirectory(Path.GetDirectoryName(path)!); }
+            // Check ancestors first: a missing descendant must not mask an excluded or linked parent.
+            if (!AllowedDirectory(Path.GetDirectoryName(path)!, allowMissing)) return false;
+            try { return allowedDirectories[path] = !File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint); }
+            catch (Exception e) when (allowMissing && e is FileNotFoundException or DirectoryNotFoundException) { return true; }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { issues.Add(new(path, "UnreadableDirectory")); return false; }
         }
         void AddFile(string path)
@@ -60,7 +63,8 @@ public sealed class FileCatalog : IFileCatalog
             foreach (string module in listed.Submodules)
             {
                 string path = Path.GetFullPath(Path.Combine(directory, module));
-                if (!Within(path, root) || !AllowedDirectory(path)) continue;
+                if (!Within(path, root) || !AllowedDirectory(path, allowMissing: true)) continue;
+                if (!Directory.Exists(path)) { issues.Add(new(path, "SubmoduleNotInitialized")); continue; }
                 if (Directory.Exists(path) && (File.Exists(Path.Combine(path, ".git")) || Directory.Exists(Path.Combine(path, ".git"))))
                     await WalkGit(path).ConfigureAwait(false);
                 else issues.Add(new(path, "SubmoduleNotInitialized"));

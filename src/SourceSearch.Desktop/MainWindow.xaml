@@ -7,14 +7,16 @@
       <TextBox AutomationProperties.AutomationId="RootPath" Text="{Binding RootPath, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" Padding="6"/>
       <StackPanel Orientation="Horizontal" Margin="0,8">
         <Button Content="选择目录" Click="ChooseFolder_Click" IsEnabled="{Binding CanEdit}" Padding="10,5" Margin="0,0,8,0"/>
-        <Button Content="建立 / 重建索引" Click="Build_Click" IsEnabled="{Binding CanEdit}" Padding="10,5" Margin="0,0,8,0"/>
-        <Button Content="取消" Click="Cancel_Click" Padding="10,5"/>
+        <Button Content="建立 / 重建索引" Command="{Binding BuildCommand}" Padding="10,5" Margin="0,0,8,0"/>
+        <Button Content="取消" Command="{Binding CancelCommand}" Padding="10,5"/>
       </StackPanel>
       <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
     </StackPanel>
     <StackPanel Grid.Row="1" Margin="0,16,0,12">
       <TextBlock Text="搜索文本" Margin="0,0,0,4"/>
-      <TextBox AutomationProperties.AutomationId="QueryText" Text="{Binding QueryText, UpdateSourceTrigger=PropertyChanged}" KeyDown="Query_KeyDown" Padding="6"/>
+      <TextBox x:Name="QueryInput" AutomationProperties.AutomationId="QueryText" Text="{Binding QueryText, UpdateSourceTrigger=PropertyChanged}" Padding="6">
+        <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SearchCommand}"/></TextBox.InputBindings>
+      </TextBox>
       <CheckBox Content="全字匹配" IsChecked="{Binding WholeWord}" Margin="0,8"/>
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -25,8 +27,8 @@
         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ExcludeText, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding ExcludeEnabled}" Padding="4" Margin="0,6,0,0" ToolTip="例如 min,map；多个后缀以逗号分隔"/>
       </Grid>
       <StackPanel Orientation="Horizontal" Margin="0,8">
-        <Button Content="搜索" Click="Search_Click" IsEnabled="{Binding CanSearch}" Padding="16,5" Margin="0,0,8,0"/>
-        <Button Content="加载下一批" Click="More_Click" IsEnabled="{Binding CanMore}" Padding="10,5"/>
+        <Button x:Name="SearchButton" Content="搜索" Command="{Binding SearchCommand}" Padding="16,5" Margin="0,0,8,0"/>
+        <Button Content="加载下一批" Command="{Binding MoreCommand}" Padding="10,5"/>
       </StackPanel>
       <TextBlock Text="{Binding TimingText}" TextWrapping="Wrap"/>
     </StackPanel>

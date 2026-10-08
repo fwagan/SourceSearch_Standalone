@@ -31,7 +31,7 @@ Windows computer-use helper连续两次启动失败（sandbox setup refresh erro
 
 ## 保留问题和交付边界
 
-独立审核的两项Minor暂缓：禁用后缀条件后执行搜索会清空该控件原有文本，再启用时需要重新输入；未初始化且目录不存在的子模块会报告`UnreadableDirectory`而非更准确的`SubmoduleNotInitialized`。两项均未隐藏为通过项。
+MVP 独立审核的两项Minor当时暂缓：禁用后缀条件后执行搜索会清空该控件原有文本；不存在的未初始化子模块目录报告`UnreadableDirectory`。这两项已在后续[产品化第一阶段](../product-stage1.md)修复。本页保留 MVP 的历史测量，不作为重构后重新验收的证据。
 
 原型从源码目录运行，运行时通过上级`SourceSearch.slnx`定位工具的索引目录；尚未做可移动单文件安装包。持久化分支缓存、增量重建、缓存管理器、正则和模糊查询继续延期。
 

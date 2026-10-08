@@ -4,10 +4,10 @@ $workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $workspace
 try {
     if (-not $NoBuild) {
-        dotnet build src/SourceSearch.Desktop -c Release
+        dotnet build src/SourceSearch.UiValidation -c Release
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
-    if (-not $Executable) { $Executable = Join-Path $workspace 'src/SourceSearch.Desktop/bin/Release/net10.0-windows/SourceSearch.Desktop.exe' }
+    if (-not $Executable) { $Executable = Join-Path $workspace 'src/SourceSearch.UiValidation/bin/Release/net10.0-windows/SourceSearch.UiValidation.exe' }
     $fixture = Join-Path ([IO.Path]::GetTempPath()) ('SourceSearch.UIFixture/' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $fixture -Force | Out-Null
     (1..1100 | ForEach-Object { "User row$_ GetUser UserService" }) | Set-Content -LiteralPath (Join-Path $fixture 'sample.cs') -Encoding utf8

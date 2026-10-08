@@ -11,6 +11,7 @@ Windows / .NET 10 的独立源码搜索验证版。核心使用 Lucene.Net 倒�
 ```powershell
 dotnet build SourceSearch.slnx -c Release
 dotnet test tests/SourceSearch.Core.Tests -c Release --no-restore
+dotnet test tests/SourceSearch.Presentation.Tests -c Release --no-restore
 dotnet run --project src/SourceSearch.Desktop -c Release --no-build -- --root 'C:\Coding\Ftrans\ftrans.main'
 ```
 
@@ -49,7 +50,19 @@ pwsh -NoProfile -File scripts/validate-ui-smoke.ps1
 
 预热 5 次，每查询测量 30 次首批 100 行；P95 目标是每组 ≤100 ms。`core` 测量后台查询；`ui-render-checkpoint` 还包含结果绑定、布局和下一次 WPF rendering 检查点，不等于物理显示器呈现时间。索引打开和首个查询单列；各组另记 `FirstInSequenceMs`（该组预热前的一次，不声称文件系统或共享候选行缓存完全冷）。窗口不可见/最小化、样本不足或渲染超时均视为无效，不能报通过。
 
-报告在 `artifacts/reports/<preset>`，含 build、queries、correctness、timings 和 ui-timings JSON；命令失败返回非零退出码。`-NoBuild` 可复用已构建 Release 程序。UI 脚本额外支持 `-Executable` 指定构建产物。`--snapshot` 只供显式 `--ui-benchmark` 模式打开已有索引，不是产品缓存复用功能。
+报告在 `artifacts/reports/<preset>`，含 build、queries、correctness、timings 和 ui-timings JSON；命令失败返回非零退出码。`-NoBuild` 可复用已构建 Release 程序。UI 脚本默认构建并启动独立的 `SourceSearch.UiValidation.exe`，额外支持 `-Executable` 指定验证宿主产物。`--ui-smoke`、`--ui-benchmark`、`--snapshot` 属于验证宿主，正式 `SourceSearch.Desktop.exe` 仅使用 `--root` 指定初始目录。这不是产品缓存复用功能。
+
+## 项目职责
+
+| 项目 | 职责与依赖 |
+|---|---|
+| Core | 文件枚举、倒排索引、查询、快照和请求生命周期 |
+| Presentation | ViewModel、命令、状态、结果批次和呈现接口；仅依赖 Core，可在无 WPF 环境下测试 |
+| Desktop | 正式 WPF 窗口、目录对话框、命令绑定、呈现适配器及关闭；依赖 Core/Presentation |
+| Validation | 独立命令行正确性和核心性能验证 |
+| UiValidation | 独立 WPF 冒烟/基准入口，复用正式窗口和 ViewModel；依赖 Desktop/Validation |
+
+正式程序不引用两个验证项目。第一阶段整理已完成：禁用后缀过滤保留原文本，缺失子模块准确报告 `SubmoduleNotInitialized`，呈现失败使分页游标失效。当前仍沿用 MVP 界面；后续在此结构上接入 MaterialDesign。验证记录见 [产品化第一阶段](docs/validation/product-stage1.md)。
 
 设计与计划见 `docs/superpowers`；实际结果见 `docs/validation/search-core`。验证目标和实际是否达标以报告为准。
 

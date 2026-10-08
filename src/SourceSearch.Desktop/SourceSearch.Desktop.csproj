@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><OutputType>WinExe</OutputType></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../SourceSearch.Core/SourceSearch.Core.csproj"/><ProjectReference Include="../SourceSearch.Validation/SourceSearch.Validation.csproj"/></ItemGroup>
+  <ItemGroup><ProjectReference Include="../SourceSearch.Core/SourceSearch.Core.csproj"/><ProjectReference Include="../SourceSearch.Presentation/SourceSearch.Presentation.csproj"/></ItemGroup>
 </Project>

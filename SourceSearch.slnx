@@ -1,1 +1,9 @@
-<Solution><Project Path="src/SourceSearch.Core/SourceSearch.Core.csproj"/><Project Path="src/SourceSearch.Validation/SourceSearch.Validation.csproj"/><Project Path="src/SourceSearch.Desktop/SourceSearch.Desktop.csproj"/><Project Path="tests/SourceSearch.Core.Tests/SourceSearch.Core.Tests.csproj"/></Solution>
+<Solution>
+  <Project Path="src/SourceSearch.Core/SourceSearch.Core.csproj"/>
+  <Project Path="src/SourceSearch.Presentation/SourceSearch.Presentation.csproj"/>
+  <Project Path="src/SourceSearch.Desktop/SourceSearch.Desktop.csproj"/>
+  <Project Path="src/SourceSearch.Validation/SourceSearch.Validation.csproj"/>
+  <Project Path="src/SourceSearch.UiValidation/SourceSearch.UiValidation.csproj"/>
+  <Project Path="tests/SourceSearch.Core.Tests/SourceSearch.Core.Tests.csproj"/>
+  <Project Path="tests/SourceSearch.Presentation.Tests/SourceSearch.Presentation.Tests.csproj"/>
+</Solution>

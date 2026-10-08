@@ -2,6 +2,39 @@ namespace SourceSearch.Core.Tests;
 public class FileCatalogTests
 {
     [Theory]
+    [InlineData("bin")]
+    [InlineData("bin/missing/module")]
+    [InlineData("libs/bin/missing/module")]
+    public async Task Missing_gitlinks_in_excluded_directories_do_not_emit_diagnostics(string module)
+    {
+        using var corpus = new TestCorpus(); await corpus.GitAsync("", "init");
+        await corpus.GitAsync("", "update-index", "--add", "--cacheinfo", "160000", new string('1', 40), module);
+        var result = await new FileCatalog().EnumerateAsync(new(corpus.Root, CorpusPresets.Mixed), default);
+        Assert.Empty(result.Issues);
+    }
+    [Theory]
+    [InlineData("missing-module")]
+    [InlineData("libs/missing-module")]
+    [InlineData("libs/nested/missing-module")]
+    public async Task Missing_gitlink_directory_has_submodule_not_initialized_diagnostic(string module)
+    {
+        using var corpus = new TestCorpus(); await corpus.GitAsync("", "init");
+        await corpus.GitAsync("", "update-index", "--add", "--cacheinfo", "160000", new string('1', 40), module);
+        var result = await new FileCatalog().EnumerateAsync(new(corpus.Root, CorpusPresets.Mixed), default);
+        Assert.Equal("SubmoduleNotInitialized", Assert.Single(result.Issues).Reason);
+        Assert.Equal(Path.Combine(corpus.Root, module.Replace('/', Path.DirectorySeparatorChar)), result.Issues[0].Path);
+    }
+    [Fact]
+    public async Task Missing_gitlink_below_symlink_is_excluded_without_missing_directory_diagnostic()
+    {
+        using var corpus = new TestCorpus(); using var outside = new TestCorpus();
+        await corpus.GitAsync("", "init");
+        await corpus.GitAsync("", "update-index", "--add", "--cacheinfo", "160000", new string('1', 40), "linked/missing/module");
+        Directory.CreateSymbolicLink(Path.Combine(corpus.Root, "linked"), outside.Root);
+        var result = await new FileCatalog().EnumerateAsync(new(corpus.Root, CorpusPresets.Mixed), default);
+        Assert.Empty(result.Files); Assert.Empty(result.Issues);
+    }
+    [Theory]
     [InlineData(@"C:\source.cs", @"C:\", true)]
     [InlineData(@"\\server\share\source.cs", @"\\server\share\", true)]
     [InlineData(@"C:\repo-extra\source.cs", @"C:\repo", false)]
