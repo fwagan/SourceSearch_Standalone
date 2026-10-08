@@ -1,1 +1,1 @@
-<Project><PropertyGroup><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile><Deterministic>true</Deterministic></PropertyGroup></Project>
+<Project><PropertyGroup><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile><RestorePackagesPath>$(MSBuildThisFileDirectory).tmp/nuget</RestorePackagesPath><Deterministic>true</Deterministic></PropertyGroup></Project>

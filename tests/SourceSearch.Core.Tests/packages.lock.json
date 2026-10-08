@@ -125,6 +125,12 @@
         "dependencies": {
           "Lucene.Net": "[4.8.0-beta00018, )"
         }
+      },
+      "sourcesearch.validation": {
+        "type": "Project",
+        "dependencies": {
+          "SourceSearch.Core": "[1.0.0, )"
+        }
       }
     }
   }
