@@ -1,14 +1,17 @@
 param(
     [string]$Root = 'C:\Coding\Ftrans\ftrans.main',
-    [ValidateSet('csharp', 'mixed')][string]$Preset = 'csharp'
+    [ValidateSet('csharp', 'mixed')][string]$Preset = 'csharp',
+    [switch]$NoBuild
 )
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $workspace
 try {
-    dotnet build src/SourceSearch.Validation -c Release
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    if (-not $NoBuild) {
+        dotnet build src/SourceSearch.Validation -c Release
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
     $reportDir = Join-Path $workspace "artifacts/reports/$Preset"
     New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
     $hardware = [ordered]@{ Cpu = 'Unavailable'; MemoryBytes = $null; Disks = @(); Error = $null }
