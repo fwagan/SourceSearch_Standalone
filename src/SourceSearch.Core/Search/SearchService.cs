@@ -48,14 +48,11 @@ public sealed class SearchService : ISearchService
                 ct.ThrowIfCancellationRequested();
                 int global = leaf.DocBase + local;
                 visited++;
-                var document = snapshot.Searcher.Doc(global);
-                string line = document.Get("text");
-                var matches = LiteralMatcher.Find(line, request.Text, request.Mode, ct);
+                var line = snapshot.GetLine(global, ct);
+                var matches = LiteralMatcher.FindNormalized(line.Text, line.Normalized, normalized, request.Mode, ct);
                 if (matches.Count > 0)
                 {
-                    int fileId = document.GetField("file_id").GetInt32Value()!.Value;
-                    int lineNumber = document.GetField("line_number").GetInt32Value()!.Value;
-                    hits.Add(new(snapshot.Report.Files[fileId].FullPath, lineNumber, line, matches));
+                    hits.Add(new(snapshot.Report.Files[line.FileId].FullPath, line.LineNumber, line.Text, matches));
                     if (hits.Count == pageSize) return new(hits, new(snapshot.Id, key, global), false, visited, timer.Elapsed);
                 }
                 local = scorer.NextDoc();

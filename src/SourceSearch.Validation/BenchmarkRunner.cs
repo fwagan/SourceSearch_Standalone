@@ -14,6 +14,9 @@ public sealed class BenchmarkRunner(ISearchService search)
         var results = new List<QueryTiming>();
         foreach (var query in queries)
         {
+            var first = Stopwatch.StartNew();
+            await search.SearchAsync(snapshot, query.Request, null, 100, ct).ConfigureAwait(false);
+            double firstMs = first.Elapsed.TotalMilliseconds;
             for (int i = 0; i < warmups; i++) await search.SearchAsync(snapshot, query.Request, null, 100, ct).ConfigureAwait(false);
             var times = new List<double>();
             SearchPage? last = null;
@@ -23,7 +26,7 @@ public sealed class BenchmarkRunner(ISearchService search)
                 last = await search.SearchAsync(snapshot, query.Request, null, 100, ct).ConfigureAwait(false);
                 times.Add(timer.Elapsed.TotalMilliseconds);
             }
-            var result = new QueryTiming(query.Name, "core", times.Count, Percentile(times, .5), Percentile(times, .95), times.Max(), last!.Hits.Count, last.CandidatesVisited, times);
+            var result = new QueryTiming(query.Name, "core", times.Count, Percentile(times, .5), Percentile(times, .95), times.Max(), last!.Hits.Count, last.CandidatesVisited, times, firstMs);
             results.Add(result);
             Console.Error.WriteLine($"Benchmark {query.Name}: P95={result.P95Ms:F2} ms, rows={last.Hits.Count}");
         }
