@@ -1,0 +1,91 @@
+{
+  "Root": "C:\\Coding\\Ftrans\\ftrans.main",
+  "Date": "2026-10-08",
+  "Method": "Git tracked and nonignored untracked files, explicit initialized submodules; metadata only; excludes reparse-point files",
+  "TotalFiles": 41718,
+  "TotalMiB": 1735.16,
+  "CSharpFiles": 20614,
+  "CSharpMiB": 235.79,
+  "MixedExtensionFiles": 35527,
+  "MixedExtensionMiB": 547.02,
+  "MixedExtensions": [
+    ".cs",
+    ".csproj",
+    ".props",
+    ".targets",
+    ".sln",
+    ".slnx",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".vue",
+    ".html",
+    ".cshtml",
+    ".css",
+    ".scss",
+    ".less",
+    ".json",
+    ".xml",
+    ".resx",
+    ".config",
+    ".yaml",
+    ".yml",
+    ".md",
+    ".txt",
+    ".sql",
+    ".ps1",
+    ".psm1",
+    ".sh",
+    ".go",
+    ".mod",
+    ".sum",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".py"
+  ],
+  "LargestMixedFiles": [
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\test\\tools\\Conris.Ftrans.FileTypeAnalysis.Demo\\FileTypeAnalysis\\TrIDEngine\\XmlDefinitions.cs",
+      "Bytes": 8972899
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\web.front\\Conris.Ftrans.Front.Web\\wwwroot\\v5\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\products\\ftrans.b2b\\Ftrans.B2B.WebUI\\public\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\web.shared\\public\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\products\\ftrans.tdr\\Ftrans.TDR.WebUI\\public\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\products\\ftrans.ferry\\Ftrans.Ferry.WebUI\\public\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\products\\ftrans.sft\\Ftrans.SFT.WebUI\\public\\js\\preview\\o3dv\\libs\\web-ifc\\web-ifc-api-iife.js",
+      "Bytes": 5562111
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\web.front\\Conris.Ftrans.Front.Web\\wwwroot\\outlook\\scripts\\office\\dist\\office-with-first-party.d.ts",
+      "Bytes": 4274149
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\web.front\\Conris.Ftrans.Front.Web\\wwwroot\\outlook\\scripts\\office\\dist\\office.d.ts",
+      "Bytes": 3968073
+    },
+    {
+      "Path": "C:\\Coding\\Ftrans\\ftrans.main\\src\\products\\code\\Conris.Ftrans\\src\\web.front\\DataLeakagePrevention\\Conris.Ftrans.Front.DLP.Repository\\DLPMigrationProvider.cs",
+      "Bytes": 3741218
+    }
+  ]
+}
