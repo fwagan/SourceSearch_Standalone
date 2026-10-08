@@ -96,8 +96,7 @@ public partial class MainWindow : Window
         {
             reply = await controller.SearchAsync(request, after, Math.Min(100, more ? 1000 - Model.Results.Count : 100), ct);
             if (reply.RequestId != controller.CurrentRequestId) throw new OperationCanceledException("Superseded query.");
-            if (!more) Model.Results.Clear();
-            foreach (var hit in reply.Page.Hits) Model.Results.Add(ResultRow.From(hit));
+            Model.Results.Publish(reply.Page.Hits.Select(ResultRow.From), more);
             if (!more && Model.Results.Count > 0) ResultsGrid.ScrollIntoView(Model.Results[0]);
         }, ResultsGrid, ct);
         if (reply!.RequestId != controller.CurrentRequestId) throw new OperationCanceledException("Superseded query.");

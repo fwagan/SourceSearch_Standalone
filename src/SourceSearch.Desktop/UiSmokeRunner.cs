@@ -17,7 +17,12 @@ public partial class MainWindow
             new("smoke", new(text, mode, ExtensionFilter.Parse(include.Length > 0, include, exclude.Length > 0, exclude)), "smoke");
         await BuildIndexAsync();
         Check(Model.CanSearch, "Fixture index ready");
+        int notifications = 0;
+        System.Collections.Specialized.NotifyCollectionChangedEventHandler changed = (_, _) => notifications++;
+        Model.Results.CollectionChanged += changed;
         var contains = await ExecuteMeasuredSearchAsync(Query("User", include: "txt"), default);
+        Model.Results.CollectionChanged -= changed;
+        Check(notifications == 1, "A search batch publishes one collection notification");
         Check(contains.Page.Hits.Count == 5, "Default contains matches embedded identifiers");
         var whole = await ExecuteMeasuredSearchAsync(Query("User", MatchMode.WholeWord, "txt"), default);
         Check(whole.Page.Hits.Count == 2, "Whole word excludes identifier fragments, ignores case");
