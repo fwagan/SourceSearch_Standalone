@@ -16,6 +16,8 @@ public sealed class TestCorpus : IDisposable
         Directory.CreateDirectory(Root);
     }
     public string Write(string relativePath, string text) => WriteBytes(relativePath, new UTF8Encoding(false).GetBytes(text));
+    public Task<BuildResult> BuildAsync() => new IndexBuilder(new FileCatalog(), new StrictTextReader()).BuildAsync(
+        new(new(Root, CorpusPresets.Mixed), Path.Combine(Root, ".index")), null, default);
     public string WriteBytes(string relativePath, byte[] bytes)
     {
         string path = Path.GetFullPath(Path.Combine(Root, relativePath));
