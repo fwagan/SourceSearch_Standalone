@@ -1,5 +1,7 @@
 # 检索验证
 
+本次结论：两套真实语料的核心正确性和暖查询性能均通过；可见 UI 的100ms首屏目标尚未全面通过。见 [核心报告](core-results.md)、[UI报告及保留问题](ui-results.md)。
+
 在项目根目录执行 `pwsh -NoProfile -File scripts/validate-core.ps1 -Preset csharp`，随后用 `-Preset mixed` 测混合源码。输入默认是 `C:\Coding\Ftrans\ftrans.main`，可通过 `-Root` 更改。
 
 原始索引、查询集、逐查询30次样本、输入清单和完整错误保存在 `artifacts/`，不纳入 Git。正式汇总保存在本目录。退出码 0 表示当前步骤通过，1 表示运行/验证失败或延迟超标，2 表示参数错误，130 表示取消。
@@ -7,3 +9,5 @@
 正确性校验扫描所有已索引文件，并验证源码字节 SHA-256 与快照相同。它独立按 Unicode 标量计算匹配，比较每条结果的路径、行号、原文和全部命中偏移，通过256位多重集合摘要、行数、命中数量避免高频词结果占满内存；此校验不受 UI 显示上限限制。
 
 核心测量包括首次打开、首次查询、5次预热后30次首批100行查询。核心结果不能代替可见 UI 的呈现测量。任何跳过文件、性能失败或语料变化都必须在汇总中列明。
+
+核心脚本结束后执行 `pwsh -NoProfile -File scripts/validate-ui.ps1 -Preset csharp` 和 `-Preset mixed`，会打开可见窗口；不要最小化。小型夹具自测为 `scripts/validate-ui-smoke.ps1`。需要重新生成本目录汇总时运行 `scripts/summarize-validation.ps1`，它读取本地报告而不重新查询源码；`-SearchRevision` 应填写实际测量二进制对应的revision。
