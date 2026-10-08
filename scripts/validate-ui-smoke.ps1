@@ -8,7 +8,7 @@ try {
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     if (-not $Executable) { $Executable = Join-Path $workspace 'src/SourceSearch.Desktop/bin/Release/net10.0-windows/SourceSearch.Desktop.exe' }
-    $fixture = Join-Path $workspace ('.tmp/ui-smoke/' + [Guid]::NewGuid().ToString('N'))
+    $fixture = Join-Path ([IO.Path]::GetTempPath()) ('SourceSearch.UIFixture/' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $fixture -Force | Out-Null
     (1..1100 | ForEach-Object { "User row$_ GetUser UserService" }) | Set-Content -LiteralPath (Join-Path $fixture 'sample.cs') -Encoding utf8
     'GetUser UserService', 'User' | Set-Content -LiteralPath (Join-Path $fixture 'sample.js') -Encoding utf8

@@ -2,6 +2,8 @@ using System.ComponentModel;
 namespace SourceSearch.Core;
 public sealed class FileCatalog : IFileCatalog
 {
+    internal static bool IsWithin(string path, string parent) => path.Equals(parent, StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith(Path.EndsInDirectorySeparator(parent) ? parent : parent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     private static readonly HashSet<string> ExcludedDirectories = new([".git", ".vs", "bin", "obj", "node_modules", ".tmp", ".temp", ".worktrees", "artifacts"], StringComparer.OrdinalIgnoreCase);
 
     public async Task<CatalogResult> EnumerateAsync(CatalogOptions options, CancellationToken ct)
@@ -16,7 +18,7 @@ public sealed class FileCatalog : IFileCatalog
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var allowedDirectories = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase) { [root] = true };
 
-        bool Within(string path, string parent) => path.Equals(parent, StringComparison.OrdinalIgnoreCase) || path.StartsWith(parent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        bool Within(string path, string parent) => IsWithin(path, parent);
         bool AllowedDirectory(string path)
         {
             if (allowedDirectories.TryGetValue(path, out bool allowed)) return allowed;
@@ -64,7 +66,7 @@ public sealed class FileCatalog : IFileCatalog
                 else issues.Add(new(path, "SubmoduleNotInitialized"));
             }
         }
-        string repo = root;
+        string repo = GitFileEnumerator.FindRepositoryRoot(root);
         if (File.Exists(Path.Combine(repo, ".git")) || Directory.Exists(Path.Combine(repo, ".git")))
         {
             try { await WalkGit(root).ConfigureAwait(false); }

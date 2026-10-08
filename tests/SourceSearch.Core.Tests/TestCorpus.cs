@@ -8,10 +8,8 @@ public sealed class TestCorpus : IDisposable
     public string Root { get; }
     public TestCorpus()
     {
-        string current = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(current, "SourceSearch.slnx")))
-            current = Directory.GetParent(current)?.FullName ?? throw new InvalidOperationException("Workspace not found.");
-        testRoot = Path.Combine(current, ".tmp", "tests");
+        // Plain-folder fixtures must not inherit this project's .gitignore.
+        testRoot = Path.Combine(Path.GetTempPath(), "SourceSearch.Tests");
         Root = Path.Combine(testRoot, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Root);
     }

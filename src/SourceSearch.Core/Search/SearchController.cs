@@ -97,6 +97,8 @@ public sealed class SearchController(IIndexBuilder builder, ISearchService searc
         }
     }
 
+    public void CancelQuery()
+    { lock (sync) { latestQuery?.Cancel(); requestId++; } }
     public void Cancel()
     {
         lock (sync) { latestQuery?.Cancel(); building?.Cancel(); requestId++; }

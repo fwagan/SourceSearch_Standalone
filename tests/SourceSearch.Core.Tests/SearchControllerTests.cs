@@ -28,6 +28,19 @@ public sealed class SearchControllerTests
         }
     }
     [Fact]
+    public async Task Query_only_invalidation_does_not_cancel_build()
+    {
+        using var corpus = new TestCorpus(); corpus.Write("a.cs", "User");
+        var built = await corpus.BuildAsync();
+        var builder = new ControlledBuilder();
+        await using var controller = new SearchController(builder, new SearchService());
+        var pending = controller.RebuildAsync(new(new(corpus.Root, CorpusPresets.Mixed), Path.Combine(corpus.Root, ".index")), null, default);
+        controller.CancelQuery();
+        builder.Calls[0].SetResult(built);
+        await pending;
+        Assert.Equal(SearchState.Ready, controller.State);
+    }
+    [Fact]
     public async Task New_request_wins_even_when_old_service_ignores_cancellation()
     {
         using var corpus = new TestCorpus(); corpus.Write("a.cs", "User");

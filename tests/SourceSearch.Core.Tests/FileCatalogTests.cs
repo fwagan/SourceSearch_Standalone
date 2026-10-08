@@ -1,6 +1,23 @@
 namespace SourceSearch.Core.Tests;
 public class FileCatalogTests
 {
+    [Theory]
+    [InlineData(@"C:\source.cs", @"C:\", true)]
+    [InlineData(@"\\server\share\source.cs", @"\\server\share\", true)]
+    [InlineData(@"C:\repo-extra\source.cs", @"C:\repo", false)]
+    [InlineData(@"C:\repo\source.cs", @"C:\repo", true)]
+    public void Containment_supports_roots_without_accepting_sibling_prefixes(string path, string parent, bool expected) =>
+        Assert.Equal(expected, FileCatalog.IsWithin(path, parent));
+    [Fact]
+    public async Task Git_subdirectory_obeys_parent_ignore_rules_and_stays_in_selected_scope()
+    {
+        using var corpus = new TestCorpus();
+        await corpus.GitAsync("", "init");
+        corpus.Write(".gitignore", "ignored.cs\n");
+        corpus.Write("src/kept.cs", "User"); corpus.Write("src/ignored.cs", "Hidden"); corpus.Write("outside.cs", "Hidden");
+        var result = await new FileCatalog().EnumerateAsync(new(Path.Combine(corpus.Root, "src"), CorpusPresets.CSharp), default);
+        Assert.EndsWith("kept.cs", Assert.Single(result.Files).FullPath);
+    }
     [Fact] public async Task NonGitCatalogExcludesBuildOutputsAndExplicitRoots()
     {
         using var corpus = new TestCorpus();

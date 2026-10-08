@@ -20,7 +20,7 @@ public partial class MainWindow : Window
         Model.PropertyChanged += (_, change) =>
         {
             if (change.PropertyName is nameof(Model.QueryText) or nameof(Model.WholeWord) or nameof(Model.IncludeEnabled) or nameof(Model.IncludeText) or nameof(Model.ExcludeEnabled) or nameof(Model.ExcludeText))
-            { controller.Cancel(); cursor = null; Model.CanMore = false; }
+            { controller.CancelQuery(); cursor = null; Model.CanMore = false; }
         };
     }
     public static string WorkspaceRoot
