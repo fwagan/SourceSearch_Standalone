@@ -7,7 +7,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 namespace SourceSearch.Core;
-public sealed class IndexBuilder(IFileCatalog catalog, ITextSource source) : IIndexBuilder
+public sealed partial class IndexBuilder(IFileCatalog catalog, ITextSource source) : IIndexBuilder
 {
     private static readonly FieldType TokenField = CreateFieldType();
     public Task<BuildResult> BuildAsync(IndexBuildOptions options, IProgress<BuildProgress>? progress, CancellationToken ct) =>
@@ -17,33 +17,59 @@ public sealed class IndexBuilder(IFileCatalog catalog, ITextSource source) : IIn
     {
         ct.ThrowIfCancellationRequested();
         var timer = Stopwatch.StartNew();
+        using var previous = options.PreviousSnapshotPath is null ? null : IndexSnapshot.Open(options.PreviousSnapshotPath);
+        if (previous is not null && !Compatible(previous, options.Catalog))
+            throw new InvalidDataException("Previous snapshot requires a full rebuild.");
         Guid id = Guid.NewGuid();
         string root = Path.GetFullPath(options.IndexRoot);
         string path = Path.Combine(root, id.ToString("N"));
-        System.IO.Directory.CreateDirectory(path);
         var input = options.Catalog with { ExcludedRoots = (options.Catalog.ExcludedRoots ?? []).Append(root).ToArray() };
         var list = await catalog.EnumerateAsync(input, ct).ConfigureAwait(false);
+        var oldFiles = previous?.Report.Files.ToDictionary(f => f.FullPath, StringComparer.OrdinalIgnoreCase) ?? new Dictionary<string, IndexedFile>(StringComparer.OrdinalIgnoreCase);
+        bool Unchanged(SourceFile f) => oldFiles.TryGetValue(f.FullPath, out var old) && SameStamp(f.FullPath, old);
+        if (previous is not null && list.Files.Count == oldFiles.Count && list.Files.All(Unchanged) &&
+            list.Issues.SequenceEqual(previous.Report.Issues))
+            return new(IndexSnapshot.Open(previous.DirectoryPath), previous.Report, true);
+        System.IO.Directory.CreateDirectory(path);
+        if (previous is not null) CopyIndex(previous.DirectoryPath, path, ct);
         var files = new List<IndexedFile>();
         var issues = new List<CatalogIssue>(list.Issues);
         long lines = 0;
         int processed = 0, skipped = 0;
+        int reused = 0, added = 0, changed = 0, nextId = oldFiles.Count == 0 ? 0 : oldFiles.Values.Max(f => f.Id) + 1;
         using (var directory = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, "index"))))
         using (var analyzer = new ExplicitStreamsAnalyzer())
         {
-            var config = new IndexWriterConfig(LuceneVersion.LUCENE_48, analyzer) { OpenMode = OpenMode.CREATE, RAMBufferSizeMB = 256 };
+            var config = new IndexWriterConfig(LuceneVersion.LUCENE_48, analyzer) { OpenMode = previous is null ? OpenMode.CREATE : OpenMode.APPEND, RAMBufferSizeMB = 256 };
             var writer = new IndexWriter(directory, config);
             try
             {
+                var present = list.Files.Select(f => f.FullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var removed in oldFiles.Values.Where(f => !present.Contains(f.FullPath)))
+                    writer.DeleteDocuments(new Term("file_key", removed.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 foreach (var file in list.Files)
                 {
                     ct.ThrowIfCancellationRequested();
+                    oldFiles.TryGetValue(file.FullPath, out var old);
+                    if (Unchanged(file))
+                    {
+                        files.Add(old!); lines += old!.LineCount; reused++; processed++;
+                        progress?.Report(new(processed, files.Count, skipped)); continue;
+                    }
                     var read = await source.ReadAsync(file, input.MaxFileBytes, ct).ConfigureAwait(false);
                     ct.ThrowIfCancellationRequested();
                     processed++;
+                    if (read.Content is not null && old is not null && read.Content.Sha256 == old.Sha256)
+                    {
+                        files.Add(old with { LastWriteUtc = read.Content.LastWriteUtc, Bytes = read.Content.Bytes });
+                        lines += old.LineCount; reused++; progress?.Report(new(processed, files.Count, skipped)); continue;
+                    }
+                    if (old is not null) writer.DeleteDocuments(new Term("file_key", old.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                     if (read.Content is null) { issues.Add(new(file.FullPath, read.SkipReason ?? "Unreadable")); skipped++; }
                     else
                     {
-                        int fileId = files.Count, lineNumber = 0;
+                        int fileId = old?.Id ?? nextId++, lineNumber = 0;
+                        if (old is null) added++; else changed++;
                         using var reader = new StringReader(read.Content.Text);
                         string? line;
                         while ((line = reader.ReadLine()) is not null)
@@ -53,6 +79,7 @@ public sealed class IndexBuilder(IFileCatalog catalog, ITextSource source) : IIn
                             var document = new Document
                             {
                                 new StoredField("file_id", fileId),
+                                new StringField("file_key", fileId.ToString(System.Globalization.CultureInfo.InvariantCulture), Field.Store.NO),
                                 new StoredField("line_number", ++lineNumber),
                                 new StoredField("text", line),
                                 new StringField("extension", file.Extension, Field.Store.NO),
@@ -82,9 +109,12 @@ public sealed class IndexBuilder(IFileCatalog catalog, ITextSource source) : IIn
         }
         ct.ThrowIfCancellationRequested();
         long bytes = System.IO.Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Sum(p => new FileInfo(p).Length);
-        var report = new BuildReport(id, DateTime.UtcNow, files, issues, lines, bytes, timer.Elapsed);
-        var manifest = new IndexManifest(1, Path.GetFullPath(input.RootPath), input.Extensions.Order(StringComparer.Ordinal).ToArray(), input.MaxFileBytes, report);
+        var remaining = files.Select(f => f.FullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var report = new BuildReport(id, DateTime.UtcNow, files, issues, lines, bytes, timer.Elapsed,
+            new(reused, added, changed, oldFiles.Values.Count(f => !remaining.Contains(f.FullPath))));
+        var manifest = new IndexManifest(2, Path.GetFullPath(input.RootPath), input.Extensions.Order(StringComparer.Ordinal).ToArray(), input.MaxFileBytes, report);
         await File.WriteAllTextAsync(Path.Combine(path, "manifest.json"), JsonSerializer.Serialize(manifest), ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(Path.Combine(path, "lease"), "", ct).ConfigureAwait(false);
         await File.WriteAllTextAsync(Path.Combine(path, "completed.tmp"), id.ToString("D"), ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         File.Move(Path.Combine(path, "completed.tmp"), Path.Combine(path, "completed"));

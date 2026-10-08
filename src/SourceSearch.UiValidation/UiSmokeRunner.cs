@@ -119,6 +119,34 @@ public sealed class UiSmokeRunner(MainWindow window)
         string switched = Path.Combine(outputDirectory, "empty-folder"); Directory.CreateDirectory(switched);
         await Model.SwitchFolderAsync(switched);
         Check(!Model.CanSearch && Model.Report is null && Model.Results.Count == 0, "Changing folders releases the old snapshot and results");
+        // Create a new owned Git fixture; never initialize or edit the caller's selected source folder.
+        string gitFixture = Path.Combine(Path.GetTempPath(), "SourceSearch.CacheFixture", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(gitFixture); File.WriteAllText(Path.Combine(gitFixture,"a.cs"),"User");
+        var git = new System.Diagnostics.ProcessStartInfo("git") { WorkingDirectory = gitFixture, UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true };
+        foreach(string arg in new[]{"init","-b","cache-smoke"})git.ArgumentList.Add(arg);
+        using(var process = System.Diagnostics.Process.Start(git)!)
+        {
+            var output = process.StandardOutput.ReadToEndAsync();var error=process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();await output;
+            if(process.ExitCode !=0)throw new InvalidOperationException(await error);
+        }
+        await Model.SwitchFolderAsync(gitFixture);Check(!Model.CanSearch,"A new Git folder does not automatically build a full index");
+        await Model.BuildAsync();Guid firstId=Model.Report!.SnapshotId;
+        await Model.SwitchFolderAsync(switched);await Model.SwitchFolderAsync(gitFixture);
+        Check(Model.CanSearch && Model.Report!.SnapshotId==firstId && Model.CacheSummary.Contains("复用"),"Returning to a Git folder reuses its registered snapshot");
+        File.WriteAllText(Path.Combine(gitFixture,"b.cs"),"Second User");await Model.BuildCommand.ExecuteAsync();
+        await ExecuteMeasuredSearchAsync(Query("User"),default);
+        Check(Model.Results.Count==2 && Model.Report!.Update!.Reused==1,"Incremental update adds changed files and preserves unchanged files");
+        var manager = new CacheManagerWindow(window.CacheStore!) { Owner=window };manager.Show();
+        await manager.RefreshAsync();await manager.Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);
+        var entries = await window.CacheStore!.ListAsync(default);
+        Check(entries.Any(e=>e.SourceRoot==gitFixture) && manager.IsVisible,"Cache manager displays a real branch cache registration");
+        Screenshot(manager,"ui-cache-manager.png");manager.Close();Screenshot(layout,"ui-cache-ready.png");
+        string key=IndexCache.KeyFor(new(gitFixture,CorpusPresets.Mixed),Model.Identity);
+        bool busyRejected=false;try{await window.CacheStore.DeleteAsync(key,default);}catch(IOException){busyRejected=true;}
+        Check(busyRejected,"Deleting a cache in use is rejected");
+        await Model.SwitchFolderAsync(switched);await window.CacheStore.DeleteAsync(key,default);
+        Check(!(await window.CacheStore.ListAsync(default)).Any(e=>e.Key==key),"An unused selected cache can be deleted safely");
         return checks;
     }
 }

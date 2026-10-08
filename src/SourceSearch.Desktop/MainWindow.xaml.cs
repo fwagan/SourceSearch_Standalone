@@ -11,11 +11,15 @@ public partial class MainWindow : Window
     private bool closed;
     private Task? closing;
     public SearchViewModel Model { get; }
-    public MainWindow(string? root = null)
+    public IIndexCache? CacheStore { get; }
+    public MainWindow(string? root = null, bool enableCache = true)
     {
         InitializeComponent();
-        var controller = new SearchController(new IndexBuilder(new FileCatalog(), new StrictTextReader()), new SearchService());
-        Model = new(controller, WorkspacePaths.IndexRoot, new WindowPresentation(this)) { RootPath = root ?? @"C:\Coding\Ftrans\ftrans.main" };
+        var builder = new IndexBuilder(new FileCatalog(), new StrictTextReader());
+        var identity = new WorkspaceIdentityReader();
+        CacheStore = enableCache ? new IndexCache(WorkspacePaths.CacheRoot,builder,identity) : null;
+        var controller = new SearchController(builder, new SearchService());
+        Model = new(controller, WorkspacePaths.IndexRoot, new WindowPresentation(this),identity,CacheStore) { RootPath = root ?? @"C:\Coding\Ftrans\ftrans.main" };
         DataContext = Model;
     }
     private async void ChooseFolder_Click(object sender, RoutedEventArgs e)
@@ -28,7 +32,7 @@ public partial class MainWindow : Window
     private async void Window_Activated(object? sender, EventArgs e)
     {
         if (Model is null || closed || closing is not null) return;
-        try { await Model.RefreshIdentityAsync(); }
+        try { await Model.ActivateAsync(); }
         catch (Exception error) { MessageBox.Show(this, error.Message, "无法读取目录信息"); }
     }
     private void FocusSearch_Executed(object sender, ExecutedRoutedEventArgs e) { QueryInput.Focus(); QueryInput.SelectAll(); }
@@ -42,6 +46,8 @@ public partial class MainWindow : Window
         ExcludeFilter.Margin = narrow ? new(0, 8, 0, 0) : new(8, 0, 0, 0);
     }
     private void Details_Click(object sender, RoutedEventArgs e) { if (Model.HasDetails) new IndexDetailsWindow(Model) { Owner = this }.ShowDialog(); }
+    private void CacheManager_Click(object sender, RoutedEventArgs e)
+    { if (CacheStore is not null) new CacheManagerWindow(CacheStore) { Owner = this }.ShowDialog(); }
     private void CopyPath_Click(object sender, RoutedEventArgs e)
     {
         if (ResultsGrid.SelectedItem is not ResultRow row) return;

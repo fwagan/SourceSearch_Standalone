@@ -19,11 +19,12 @@ public sealed partial class SearchViewModel
         if (!Directory.Exists(next)) throw new DirectoryNotFoundException(next);
         isSwitching = true; workspaceVersion++; identityRefresh = null;
         InvalidateQuery(); ClearResults(); Set(ref rootPath, next, nameof(RootPath));
-        Identity = new(WorkspaceKind.Unknown); IndexedRoot = ""; IndexedIdentity = null; stale = false; IndexError = ""; Phase = IndexPhase.NotBuilt;
+        Identity = new(WorkspaceKind.Unknown); IndexedRoot = ""; IndexedIdentity = null; stale = false; IndexError = ""; CacheSummary = ""; Phase = IndexPhase.NotBuilt;
         NotifyState();
         try { await controller.ClearAsync(ct); await RefreshIdentityAsync(); }
         catch (Exception error) when (error is not OperationCanceledException) { IndexError = "切换目录失败：" + error.Message; Phase = IndexPhase.Failed; throw; }
         finally { isSwitching = false; NotifyState(); }
+        if (!closed) await LoadAvailableCacheAsync();
     }
     public Task RefreshIdentityAsync()
     {
@@ -45,7 +46,8 @@ public sealed partial class SearchViewModel
     private void ApplyIdentity(WorkspaceIdentity identity)
     {
         Identity = identity;
-        if (Report is not null && IndexedIdentity is not null && identity.DiffersFrom(IndexedIdentity))
+        if (Report is not null && IndexedIdentity is not null && (identity.DiffersFrom(IndexedIdentity) ||
+            (cache is not null && IndexedIdentity.Kind == WorkspaceKind.Git && identity.Kind == WorkspaceKind.Unknown)))
         { stale = true; Phase = IndexPhase.Stale; InvalidateQuery(); ClearResults(); }
     }
 }

@@ -13,4 +13,5 @@ public static class WorkspacePaths
         }
     }
     public static string IndexRoot => Path.Combine(Root, "artifacts", "indexes", "ui");
+    public static string CacheRoot => Path.Combine(Root, "artifacts", "indexes", "cache");
 }

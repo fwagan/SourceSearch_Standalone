@@ -26,6 +26,10 @@ public sealed class SearchController(IIndexBuilder builder, ISearchService searc
 
     public Task ClearAsync(CancellationToken ct) => ReplaceAsync(_ => Task.FromResult<IndexSnapshot?>(null), ct);
 
+    /// <summary>Adopts a prepared snapshot after draining old readers; ownership transfers to this controller.</summary>
+    public Task ReplaceWithAsync(Func<CancellationToken, Task<BuildResult>> prepare, CancellationToken ct) =>
+        ReplaceAsync(async token => (await prepare(token).ConfigureAwait(false)).Snapshot, ct);
+
     private async Task ReplaceAsync(Func<CancellationToken, Task<IndexSnapshot?>> create, CancellationToken ct)
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token);

@@ -12,7 +12,7 @@ public partial class App : Application
         base.OnStartup(e);
         string? Option(string name)
         { int index = Array.IndexOf(e.Args, name); return index >= 0 && index + 1 < e.Args.Length ? e.Args[index + 1] : null; }
-        var window = new MainWindow(Option("--root"));
+        var window = new MainWindow(Option("--root"), enableCache: e.Args.Contains("--ui-smoke"));
         MainWindow = window;
         if (e.Args.Contains("--ui-smoke"))
         {

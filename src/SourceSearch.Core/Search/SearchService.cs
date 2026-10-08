@@ -52,7 +52,7 @@ public sealed class SearchService : ISearchService
                 var matches = LiteralMatcher.FindNormalized(line.Text, line.Normalized, normalized, request.Mode, ct);
                 if (matches.Count > 0)
                 {
-                    hits.Add(new(snapshot.Report.Files[line.FileId].FullPath, line.LineNumber, line.Text, matches));
+                    hits.Add(new(snapshot.FileById(line.FileId).FullPath, line.LineNumber, line.Text, matches));
                     if (hits.Count == pageSize) return new(hits, new(snapshot.Id, key, global), false, visited, timer.Elapsed);
                 }
                 local = scorer.NextDoc();

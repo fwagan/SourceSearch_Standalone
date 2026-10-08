@@ -1,0 +1,32 @@
+{
+  "Passed": true,
+  "Files": 120,
+  "InitialLines": 9600,
+  "FullMs": 2150.1414,
+  "ReuseMs": 360.2485,
+  "UpdateMs": 484.6124,
+  "RebuildMs": 811.1564,
+  "FullReads": 120,
+  "ReuseReads": 0,
+  "UpdateReads": 2,
+  "Update": {
+    "Reused": 118,
+    "Added": 1,
+    "Changed": 1,
+    "Removed": 1
+  },
+  "ResultsEqualFullRebuild": true,
+  "Legacy": [
+    {
+      "Preset": "csharp",
+      "Opened": true,
+      "Rows": 100
+    },
+    {
+      "Preset": "mixed",
+      "Opened": true,
+      "Rows": 100
+    }
+  ],
+  "Note": "Single-run synthetic fixture; not a large-repository performance claim."
+}

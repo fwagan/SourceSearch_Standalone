@@ -7,7 +7,7 @@
   <Grid x:Name="LayoutRoot" SizeChanged="Window_SizeChanged">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Border Background="{StaticResource AppSurface}" BorderBrush="{StaticResource AppBorder}" BorderThickness="0,0,0,1" Padding="18,14,18,10">
-      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel Margin="0,0,16,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding FolderName}" ToolTip="{Binding FolderName}" TextTrimming="CharacterEllipsis" FontSize="16" FontWeight="SemiBold"/>
             <TextBlock Grid.Column="1" Text="{Binding BranchLabel}" MaxWidth="160" TextTrimming="CharacterEllipsis" Style="{StaticResource MutedText}" Margin="14,3,0,0"><TextBlock.ToolTip><StackPanel><TextBlock Text="{Binding BranchLabel}"/><TextBlock Text="{Binding Identity.Error}"/></StackPanel></TextBlock.ToolTip></TextBlock></Grid>
@@ -20,8 +20,13 @@
             <Button Content="取消建立" Command="{Binding CancelCommand}" Visibility="{Binding IsBuilding, Converter={StaticResource VisibleWhen}}"/>
           </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,0"><TextBlock Text="{Binding IndexSummary}" Style="{StaticResource MutedText}" VerticalAlignment="Center"/><Button x:Name="DetailsButton" Content="详情" Click="Details_Click" Style="{StaticResource QuietButton}" Margin="8,0,0,0" Visibility="{Binding HasDetails, Converter={StaticResource VisibleWhen}}"/></StackPanel>
-        <ProgressBar Grid.Row="2" Height="3" Margin="0,6,0,0" IsIndeterminate="True" Visibility="{Binding IsBuilding, Converter={StaticResource VisibleWhen}}"/>
+        <Grid Grid.Row="1" Margin="0,6,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBlock Text="{Binding IndexSummary}" ToolTip="{Binding IndexSummary}" TextTrimming="CharacterEllipsis" Style="{StaticResource MutedText}" VerticalAlignment="Center"/>
+          <Button x:Name="DetailsButton" Grid.Column="1" Content="详情" Click="Details_Click" Style="{StaticResource QuietButton}" Margin="8,0,8,0" Visibility="{Binding HasDetails, Converter={StaticResource VisibleWhen}}"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal"><Button Content="完整重建" Command="{Binding FullRebuildCommand}" Style="{StaticResource QuietButton}" Margin="0,0,8,0" ToolTip="重新读取全部文件，适用于时间戳未变或缓存损坏"/><Button x:Name="CacheManagerButton" Content="索引缓存" Click="CacheManager_Click" Style="{StaticResource QuietButton}"/></StackPanel>
+        </Grid>
+        <TextBlock Grid.Row="2" Text="{Binding CacheSummary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding CacheSummary}" Style="{StaticResource MutedText}"/>
+        <ProgressBar Grid.Row="3" Height="3" Margin="0,6,0,0" IsIndeterminate="True" Visibility="{Binding IsBuilding, Converter={StaticResource VisibleWhen}}"/>
       </Grid>
     </Border>
     <Grid Grid.Row="1" Margin="18,16,18,12">

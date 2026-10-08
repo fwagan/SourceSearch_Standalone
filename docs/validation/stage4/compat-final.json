@@ -1,0 +1,15 @@
+{
+  "Passed": true,
+  "Checks": [
+    {
+      "Preset": "csharp",
+      "Opened": true,
+      "Rows": 100
+    },
+    {
+      "Preset": "mixed",
+      "Opened": true,
+      "Rows": 100
+    }
+  ]
+}

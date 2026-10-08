@@ -11,6 +11,7 @@ public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisp
     private readonly string indexRoot;
     private readonly ISearchPresentation presentation;
     private readonly IWorkspaceIdentityReader identityReader;
+    private readonly IIndexCache? cache;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? buildCancellation, queryCancellation;
     private SearchCursor? cursor;
@@ -19,17 +20,20 @@ public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisp
     private string rootPath = @"C:\Coding\Ftrans\ftrans.main", queryText = "", includeText = "", excludeText = "";
     private bool wholeWord, includeEnabled, excludeEnabled;
     public event PropertyChangedEventHandler? PropertyChanged;
-    public SearchViewModel(SearchController controller, string indexRoot, ISearchPresentation? presentation = null, IWorkspaceIdentityReader? identityReader = null)
+    public SearchViewModel(SearchController controller, string indexRoot, ISearchPresentation? presentation = null, IWorkspaceIdentityReader? identityReader = null, IIndexCache? cache = null)
     {
         this.controller = controller; this.indexRoot = indexRoot;
         this.presentation = presentation ?? new ImmediatePresentation();
         this.identityReader = identityReader ?? new WorkspaceIdentityReader();
+        this.cache = cache;
         BuildCommand = new(() => BuildAsync(), () => CanEdit, Error);
+        FullRebuildCommand = new(() => BuildCoreAsync(true), () => CanEdit, Error);
         SearchCommand = new(() => SearchAsync(), () => CanSubmit, Error);
         MoreCommand = new(() => SearchAsync(true), () => CanMore, Error);
         CancelCommand = new(() => { Cancel(); return Task.CompletedTask; }, () => !closed && (isBuilding || isSearching), Error);
     }
     public AsyncCommand BuildCommand { get; }
+    public AsyncCommand FullRebuildCommand { get; }
     public AsyncCommand SearchCommand { get; }
     public AsyncCommand MoreCommand { get; }
     public AsyncCommand CancelCommand { get; }
@@ -42,7 +46,8 @@ public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisp
     public bool ExcludeEnabled { get => excludeEnabled; set => SetQuery(ref excludeEnabled, value); }
     public ResultCollection Results { get; } = new();
 
-    public async Task BuildAsync(CancellationToken ct = default)
+    public Task BuildAsync(CancellationToken ct = default) => BuildCoreAsync(false, ct);
+    private async Task BuildCoreAsync(bool forceRebuild, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(closed, this);
         if (!CanEdit) throw new InvalidOperationException("Workspace is busy.");
@@ -50,7 +55,7 @@ public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisp
         workspaceVersion++; identityRefresh = null;
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token);
         buildCancellation = cancellation;
-        InvalidateQuery(); isBuilding = true; Phase = IndexPhase.Building; IndexError = ""; Progress = null; NotifyState();
+        InvalidateQuery(); isBuilding = true; Phase = IndexPhase.Building; IndexError = ""; Progress = null; CacheSummary = "正在检查文件并准备索引…"; NotifyState();
         try
         {
             var before = await identityReader.ReadAsync(root, cancellation.Token);
@@ -64,7 +69,18 @@ public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisp
                     PropertyChanged?.Invoke(this, new(nameof(IndexSummary)));
                 }
             });
-            await controller.RebuildAsync(new(new(root, CorpusPresets.Mixed), indexRoot), progress, cancellation.Token);
+            if (cache is not null && before.Kind == WorkspaceKind.Git)
+            {
+                BuildResult? prepared = null;
+                await controller.ReplaceWithAsync(async token => prepared = await cache.PrepareAsync(new(root,CorpusPresets.Mixed),before,forceRebuild,progress,token), cancellation.Token);
+                CacheSummary = prepared!.Reused ? "已复用缓存 · 文件未变化" : prepared.Report.Update is { } u ?
+                    $"{(forceRebuild ? "完整重建" : "索引更新")} · 复用 {u.Reused:N0} · 新增 {u.Added:N0} · 修改 {u.Changed:N0} · 移除 {u.Removed:N0}" : "缓存已建立";
+            }
+            else
+            {
+                await controller.RebuildAsync(new(new(root, CorpusPresets.Mixed), indexRoot), progress, cancellation.Token);
+                CacheSummary = "本次会话索引 · 不自动复用缓存";
+            }
             IndexedRoot = root; IndexedIdentity = before; stale = false; ClearResults();
             Phase = IndexPhase.Ready;
         }
