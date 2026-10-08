@@ -83,3 +83,5 @@ Files: scripts/validate-ui*.ps1（按需扩展报告输出以保留基线），d
 分支codex/materialdesign-ui，起点f549a5a；复用现有checkout及PowerShell流程记录。任务1接口供任务2使用；任务2ResultRow和状态供任务3使用；主题字典两个App使用相同URI。接口无冲突。
 
 最终：Release零警告/错误，Core93/93、Presentation21/21，可见WPF冒烟25/25，干净Desktop发布无验证文件。一次独立review的重要问题（渲染检查点前状态通知缺失）已RED→GREEN修复。前后各两套36组测量均有有效报告；后测性能退化，未达到100ms目标，建议缓存前先优化UI。证据与物理输入/DPI限制见 `../../validation/product-stage3.md`。本地提交用于保存UI功能阶段，不能作为性能通过结论。
+
+后续决定（2026-10-08）：用户接受当前性能退化，将 `ede78ce` 的100条批次、高亮开启版本设为[新基线](../../validation/performance-baseline.md)。上述缓存前优化建议不再阻断后续阶段；原始测量和旧目标未通过事实保留，阶段性能取舍已接受。

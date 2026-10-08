@@ -1,0 +1,446 @@
+[
+  {
+    "Name": "q01-Contains",
+    "Request": {
+      "Text": "User",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q01-WholeWord",
+    "Request": {
+      "Text": "User",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q02-Contains",
+    "Request": {
+      "Text": "Id",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q02-WholeWord",
+    "Request": {
+      "Text": "Id",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q03-Contains",
+    "Request": {
+      "Text": "IO",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q03-WholeWord",
+    "Request": {
+      "Text": "IO",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q04-Contains",
+    "Request": {
+      "Text": "a",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q04-WholeWord",
+    "Request": {
+      "Text": "a",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "short"
+  },
+  {
+    "Name": "q05-Contains",
+    "Request": {
+      "Text": "Service",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q05-WholeWord",
+    "Request": {
+      "Text": "Service",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q06-Contains",
+    "Request": {
+      "Text": "public",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q06-WholeWord",
+    "Request": {
+      "Text": "public",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q07-Contains",
+    "Request": {
+      "Text": "class",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q07-WholeWord",
+    "Request": {
+      "Text": "class",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q08-Contains",
+    "Request": {
+      "Text": "return",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q08-WholeWord",
+    "Request": {
+      "Text": "return",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q09-Contains",
+    "Request": {
+      "Text": "Task",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q09-WholeWord",
+    "Request": {
+      "Text": "Task",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q10-Contains",
+    "Request": {
+      "Text": "async",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q10-WholeWord",
+    "Request": {
+      "Text": "async",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q11-Contains",
+    "Request": {
+      "Text": "\u7528\u6237",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q11-WholeWord",
+    "Request": {
+      "Text": "\u7528\u6237",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q12-Contains",
+    "Request": {
+      "Text": "\u6743\u9650",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q12-WholeWord",
+    "Request": {
+      "Text": "\u6743\u9650",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q13-Contains",
+    "Request": {
+      "Text": "a.b",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q13-WholeWord",
+    "Request": {
+      "Text": "a.b",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q14-Contains",
+    "Request": {
+      "Text": "MetricsCollector",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q14-WholeWord",
+    "Request": {
+      "Text": "MetricsCollector",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q15-Contains",
+    "Request": {
+      "Text": "ricsColl",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q15-WholeWord",
+    "Request": {
+      "Text": "ricsColl",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q16-Contains",
+    "Request": {
+      "Text": "SourceSearchAbsent_7c021065b9954dd8a01fbd6b129fb24a",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "q16-WholeWord",
+    "Request": {
+      "Text": "SourceSearchAbsent_7c021065b9954dd8a01fbd6b129fb24a",
+      "Mode": 1,
+      "Filter": {
+        "Include": [],
+        "Exclude": []
+      }
+    },
+    "Group": "general"
+  },
+  {
+    "Name": "filter-include-cs",
+    "Request": {
+      "Text": "User",
+      "Mode": 0,
+      "Filter": {
+        "Include": [
+          ".cs"
+        ],
+        "Exclude": []
+      }
+    },
+    "Group": "filter"
+  },
+  {
+    "Name": "filter-exclude-cs",
+    "Request": {
+      "Text": "User",
+      "Mode": 0,
+      "Filter": {
+        "Include": [],
+        "Exclude": [
+          ".cs"
+        ]
+      }
+    },
+    "Group": "filter"
+  },
+  {
+    "Name": "filter-js-json",
+    "Request": {
+      "Text": "User",
+      "Mode": 0,
+      "Filter": {
+        "Include": [
+          ".js",
+          ".json"
+        ],
+        "Exclude": []
+      }
+    },
+    "Group": "filter"
+  },
+  {
+    "Name": "filter-overlap",
+    "Request": {
+      "Text": "User",
+      "Mode": 0,
+      "Filter": {
+        "Include": [
+          ".cs",
+          ".js"
+        ],
+        "Exclude": [
+          ".cs"
+        ]
+      }
+    },
+    "Group": "filter"
+  }
+]

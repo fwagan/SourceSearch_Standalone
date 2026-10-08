@@ -50,7 +50,7 @@ pwsh -NoProfile -File scripts/validate-ui.ps1 -Preset mixed
 pwsh -NoProfile -File scripts/validate-ui-smoke.ps1
 ```
 
-预热 5 次，每查询测量 30 次首批 100 行；P95 目标是每组 ≤100 ms。`core` 测量后台查询；`ui-render-checkpoint` 还包含结果绑定、布局和下一次 WPF rendering 检查点，不等于物理显示器呈现时间。索引打开和首个查询单列；各组另记 `FirstInSequenceMs`（该组预热前的一次，不声称文件系统或共享候选行缓存完全冷）。窗口不可见/最小化、样本不足或渲染超时均视为无效，不能报通过。
+预热 5 次，每查询测量 30 次首批 100 行。当前UI按[已接受的性能基线](docs/validation/performance-baseline.md)进行后续比较；原每组P95≤100ms不再作为当前阶段阻断条件。现有基准程序仍保留该旧目标的诊断检查，返回非零不单独代表相对新基线退化。`core` 测量后台查询；`ui-render-checkpoint` 还包含结果绑定、布局和下一次 WPF rendering 检查点，不等于物理显示器呈现时间。索引打开和首个查询单列；各组另记 `FirstInSequenceMs`（该组预热前的一次，不声称文件系统或共享候选行缓存完全冷）。窗口不可见/最小化、样本不足或渲染超时均视为无效，不能报通过。
 
 报告在 `artifacts/reports/<preset>`，含 build、queries、correctness、timings 和 ui-timings JSON；命令失败返回非零退出码。`-NoBuild` 可复用已构建 Release 程序。UI 脚本默认构建并启动独立的 `SourceSearch.UiValidation.exe`，额外支持 `-Executable` 指定验证宿主产物。`--ui-smoke`、`--ui-benchmark`、`--snapshot` 属于验证宿主，正式 `SourceSearch.Desktop.exe` 仅使用 `--root` 指定初始目录。这不是产品缓存复用功能。
 
@@ -68,4 +68,6 @@ pwsh -NoProfile -File scripts/validate-ui-smoke.ps1
 
 设计与计划见 `docs/superpowers`；实际结果见 `docs/validation/search-core`。验证目标和实际是否达标以报告为准。
 
-MVP 实测：两套真实语料各36组的完整结果均一致，核心暖查询最慢P95为38.75ms（C#）/14.15ms（混合）；当时可见UI仍有4/7组超出100ms目标。详见 [MVP 验收报告](docs/validation/search-core/ui-results.md)；本次换肤的前后测量另见 [第三阶段报告](docs/validation/product-stage3.md)，不能用历史数据声称当前 UI 已达标。
+当前已接受的UI基线：每批100条、开启高亮，C#/混合语料最慢组P95分别为782.46/604.34ms。用户于2026-10-08接受本次退化，后续与这份[性能基线](docs/validation/performance-baseline.md)比较，可继续缓存与增量阶段。
+
+MVP历史实测：两套真实语料各36组的完整结果均一致，核心暖查询最慢P95为38.75ms（C#）/14.15ms（混合）；当时可见UI仍有4/7组超出100ms目标。详见 [MVP 验收报告](docs/validation/search-core/ui-results.md)；换肤前后测量见 [第三阶段报告](docs/validation/product-stage3.md)。
