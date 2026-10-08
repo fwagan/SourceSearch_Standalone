@@ -1,6 +1,6 @@
 # Source Search
 
-Windows / .NET 10 的独立源码搜索验证版。核心使用 Lucene.Net 倒排索引：完整词索引用于全字查询，1/2/3 字符片段索引用于包含查询；候选行再次执行字面量校验。查询不重新遍历源文件。
+Windows / .NET 10 的独立源码搜索工具，采用深色紧凑 MaterialDesign WPF 界面。核心使用 Lucene.Net 倒排索引：完整词索引用于全字查询，1/2/3 字符片段索引用于包含查询；候选行再次执行字面量校验。查询不重新遍历源文件。
 
 每个打开的快照具有约 256 MiB 上限的候选行 LRU 内存缓存，复用解压后的原文及归一化文本，不缓存查询结果。关闭快照即释放；这是查询阶段的内存优化，与按仓库/分支持久缓存、增量重建无关。冷查询遇到大型压缩 JS 行时仍可能超过 100 ms。
 
@@ -15,7 +15,9 @@ dotnet test tests/SourceSearch.Presentation.Tests -c Release --no-restore
 dotnet run --project src/SourceSearch.Desktop -c Release --no-build -- --root 'C:\Coding\Ftrans\ftrans.main'
 ```
 
-打开目录后点击“建立 / 重建索引”，完成后输入文本并点击搜索或回车。默认目录是上述样本，可选择其他 Git 根目录或普通文件夹。普通模式每次启动手动建索引，没有缓存自动复用、分支缓存、增量更新或缓存管理器。原始源码只读；快照位于本工具 `artifacts/indexes/ui`。
+打开目录后点击“建立索引”，完成后输入文本并点击搜索或回车；Ctrl+F 聚焦搜索。默认目录是上述样本，可选择其他 Git 根目录或普通文件夹。当前每次启动手动建索引，没有缓存自动复用、分支缓存、增量更新或缓存管理器。原始源码只读；快照位于本工具 `artifacts/indexes/ui`。
+
+顶部显示目录、分支和索引状态；“详情”显示索引来源、统计及跳过原因。窗口变窄时两组后缀条件分行排列。结果路径可悬停查看或右键复制。修改查询条件后保留上次提交的结果与标题，按 Enter 才执行新查询，并在此之前禁用续页。
 
 ## 搜索规则
 
@@ -24,8 +26,8 @@ dotnet run --project src/SourceSearch.Desktop -c Release --no-build -- --root 'C
 - 文本按字面量处理，支持 1、2 字符短查询。没有正则、模糊匹配或跨行搜索；空查询不返回结果。
 - 后缀以逗号分隔，`cs,js` 与 `.cs,.js` 等价；不区分大小写。未勾选或空列表不限制，排除优先于包含；使用最后一个后缀，不接受 `*.cs` 或 `tar.gz`。
 - 每条结果是一行，显示完整路径、原始行号和匹配行；没有类名列。同一行多个命中合并显示，一次取 100 行，界面最多显示 1000 行，不计算全量总数。底层验证器不受显示上限限制。
-- 长行只在界面截断为前 2000 个 UTF-16 字符并标记，索引、匹配和正确性验证保留完整行。没有语法解析或高亮。
-- 搜索的是建立索引时的快照。源文件变更后需手动重建；失败或取消保留之前成功的快照。新查询会取消旧查询，关闭窗口等待在途查询释放索引。
+- 长行只在界面截断为最多 2000 个 UTF-16 字符并标记，避免拆开代理对；索引、匹配和正确性验证保留完整行。显示原始命中高亮，没有语法解析或语法高亮。
+- 搜索的是建立索引时的快照。源文件变更后需手动重建；同目录、同身份重建失败或取消保留之前成功的快照。切换目录清空旧索引与结果；窗口激活及建立前后检查分支/HEAD，检测变化后要求重建。元数据读取失败会明确标示，不能据此证明快照仍与当前 HEAD 一致。新查询会取消旧查询，关闭窗口等待在途查询释放索引。
 
 ## 输入范围
 
@@ -62,8 +64,8 @@ pwsh -NoProfile -File scripts/validate-ui-smoke.ps1
 | Validation | 独立命令行正确性和核心性能验证 |
 | UiValidation | 独立 WPF 冒烟/基准入口，复用正式窗口和 ViewModel；依赖 Desktop/Validation |
 
-正式程序不引用两个验证项目。第一阶段整理已完成：禁用后缀过滤保留原文本，缺失子模块准确报告 `SubmoduleNotInitialized`，呈现失败使分页游标失效。当前仍沿用 MVP 界面；后续在此结构上接入 MaterialDesign。验证记录见 [产品化第一阶段](docs/validation/product-stage1.md)。
+正式程序不引用两个验证项目。第一阶段整理与第三阶段 MaterialDesign 接入已完成；正式窗口与验证宿主共用主题。验证记录见 [产品化第一阶段](docs/validation/product-stage1.md) 和 [产品化第三阶段](docs/validation/product-stage3.md)。
 
 设计与计划见 `docs/superpowers`；实际结果见 `docs/validation/search-core`。验证目标和实际是否达标以报告为准。
 
-当前实测：两套真实语料各36组的完整结果均一致，核心暖查询最慢P95为38.75ms（C#）/14.15ms（混合）；可见UI仍有4/7组超出100ms目标。详见 [完整验收报告](docs/validation/search-core/ui-results.md) 和 [实施取舍/延期问题](docs/validation/search-core/implementation-decisions.md)。
+MVP 实测：两套真实语料各36组的完整结果均一致，核心暖查询最慢P95为38.75ms（C#）/14.15ms（混合）；当时可见UI仍有4/7组超出100ms目标。详见 [MVP 验收报告](docs/validation/search-core/ui-results.md)；本次换肤的前后测量另见 [第三阶段报告](docs/validation/product-stage3.md)，不能用历史数据声称当前 UI 已达标。

@@ -16,14 +16,17 @@ public sealed class SearchController(IIndexBuilder builder, ISearchService searc
     public SearchState State { get { lock (sync) return state; } }
     public long CurrentRequestId { get { lock (sync) return requestId; } }
     public BuildReport? CurrentReport { get { lock (sync) return snapshot?.Report; } }
+    public string? CurrentSourceRoot { get { lock (sync) return snapshot?.SourceRoot; } }
 
     public Task RebuildAsync(IndexBuildOptions options, IProgress<BuildProgress>? progress, CancellationToken ct) =>
         ReplaceAsync(async token => (await builder.BuildAsync(options, progress, token).ConfigureAwait(false)).Snapshot, ct);
 
     public Task OpenSnapshotAsync(string path, CancellationToken ct) =>
-        ReplaceAsync(token => Task.Run(() => IndexSnapshot.Open(path), token), ct);
+        ReplaceAsync(token => Task.Run<IndexSnapshot?>(() => IndexSnapshot.Open(path), token), ct);
 
-    private async Task ReplaceAsync(Func<CancellationToken, Task<IndexSnapshot>> create, CancellationToken ct)
+    public Task ClearAsync(CancellationToken ct) => ReplaceAsync(_ => Task.FromResult<IndexSnapshot?>(null), ct);
+
+    private async Task ReplaceAsync(Func<CancellationToken, Task<IndexSnapshot?>> create, CancellationToken ct)
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token);
         await rebuildGate.WaitAsync(cancellation.Token).ConfigureAwait(false);
@@ -48,7 +51,7 @@ public sealed class SearchController(IIndexBuilder builder, ISearchService searc
             {
                 cancellation.Token.ThrowIfCancellationRequested();
                 previous = snapshot; snapshot = replacement; replacement = null;
-                state = SearchState.Ready;
+                state = snapshot is null ? SearchState.NotBuilt : SearchState.Ready;
             }
             previous?.Dispose();
         }

@@ -2,6 +2,21 @@ using Xunit;
 namespace SourceSearch.Core.Tests;
 public sealed class SearchControllerTests
 {
+    [Fact]
+    public async Task Clear_waits_for_old_reader_then_removes_searchable_snapshot()
+    {
+        using var corpus = new TestCorpus(); corpus.Write("a.cs", "User");
+        using var built = (await corpus.BuildAsync()).Snapshot; var search = new ControlledSearch();
+        await using var controller = new SearchController(new ControlledBuilder(), search);
+        await controller.OpenSnapshotAsync(built.DirectoryPath, default);
+        var pending = controller.SearchAsync(Request, null, 100, default);
+        var clear = controller.ClearAsync(default);
+        try { Assert.False(clear.IsCompleted); }
+        finally { search.Release(0); try { await pending; } catch (OperationCanceledException) { } }
+        await clear;
+        Assert.Null(controller.CurrentReport); Assert.Equal(SearchState.NotBuilt, controller.State);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.SearchAsync(Request, null, 100, default));
+    }
     private static readonly SearchRequest Request = new("User", MatchMode.Contains, ExtensionFilter.Parse(false, "", false, ""));
     private sealed class ControlledSearch : ISearchService
     {

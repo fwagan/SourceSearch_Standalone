@@ -9,6 +9,8 @@ using SourceSearch.Validation;
 using SourceSearch.Desktop;
 using SourceSearch.Presentation;
 using System.Windows.Input;
+using System.Windows.Documents;
+using SourceSearch.Desktop.Controls;
 namespace SourceSearch.UiValidation;
 public sealed class UiSmokeRunner(MainWindow window)
 {
@@ -21,8 +23,11 @@ public sealed class UiSmokeRunner(MainWindow window)
         void Check(bool value, string message) { if (!value) throw new InvalidOperationException(message); checks.Add(message); }
         QueryCase Query(string text, MatchMode mode = MatchMode.Contains, string include = "", string exclude = "") =>
             new("smoke", new(text, mode, ExtensionFilter.Parse(include.Length > 0, include, exclude.Length > 0, exclude)), "smoke");
+        Check(Model.ShowEmpty && !Model.CanSearch, "Unbuilt folder shows empty state and disables search");
+        Check(window.FindResource("MaterialDesignOutlinedTextBox") is Style && ((SolidColorBrush)window.FindResource("AppBackground")).Color == Color.FromRgb(18,20,23), "Validation host loads the shared dark MaterialDesign theme");
         await Model.BuildCommand.ExecuteAsync();
         Check(Model.CanSearch, "Fixture index ready");
+        Check(!Model.SearchCommand.CanExecute(null), "Empty query disables search command");
         var queryInput = (TextBox)window.FindName("QueryInput");
         var searchButton = (Button)window.FindName("SearchButton");
         Check(ReferenceEquals(searchButton.Command, Model.SearchCommand) && ReferenceEquals(queryInput.InputBindings.OfType<KeyBinding>().Single().Command, Model.SearchCommand), "Search button and Enter bind to the same command");
@@ -39,6 +44,7 @@ public sealed class UiSmokeRunner(MainWindow window)
         Check(filtered.Page.Hits.Count == 2 && filtered.Page.Hits.All(h => h.FilePath.EndsWith(".js")), "Include/exclude filters, exclusion wins");
         var overlap = await ExecuteMeasuredSearchAsync(Query("User", include: "cs", exclude: "cs"), default);
         Check(overlap.Page.Hits.Count == 0, "Overlapping filters produce empty results");
+        Check(Model.ShowEmpty && Model.EmptyTitle == "没有匹配结果", "Empty search has a distinct results state");
         Model.IncludeText = "txt"; Model.ExcludeText = "js"; Model.IncludeEnabled = false; Model.ExcludeEnabled = false;
         await Model.SearchCommand.ExecuteAsync();
         Check(Model.IncludeText == "txt" && Model.ExcludeText == "js", "Disabled filter values survive interactive search");
@@ -64,10 +70,55 @@ public sealed class UiSmokeRunner(MainWindow window)
         await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
         await ExecuteMeasuredSearchAsync(Query("User", include: "txt"), default);
         Directory.CreateDirectory(outputDirectory);
-        var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(window);
-        var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
-        using (var file = File.Create(Path.Combine(outputDirectory, "ui-smoke.png"))) png.Save(file);
+        IEnumerable<T> Descendants<T>(DependencyObject node) where T : DependencyObject
+        {
+            if (node is T found) yield return found;
+            for (int i=0;i<VisualTreeHelper.GetChildrenCount(node);i++)
+                foreach (var child in Descendants<T>(VisualTreeHelper.GetChild(node,i))) yield return child;
+        }
+        Check(Descendants<HighlightedLine>(ResultsGrid).Any(t => t.Inlines.OfType<Run>().Any(r => r.Background is not null)), "Visible rows highlight original match offsets");
+        Model.QueryText = "GetUser";
+        Check(Model.HasPendingChanges && Model.AppliedRequest!.Text == "User" && !Model.CanMore, "Editing preserves applied result identity and disables paging");
+        ApplicationCommands.Find.Execute(null, window);
+        Check(queryInput.IsKeyboardFocused && queryInput.SelectionLength == queryInput.Text.Length, "Find command focuses and selects query text");
+        await ExecuteMeasuredSearchAsync(Query("User", include: "txt"), default);
+        void Screenshot(FrameworkElement visual, string name)
+        {
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(visual.ActualWidth), (int)Math.Ceiling(visual.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            var drawing = new DrawingVisual();
+            using (var context = drawing.RenderOpen())
+            {
+                var bounds = new Rect(visual.RenderSize);
+                context.DrawRectangle((Brush)window.FindResource("AppBackground"), null, bounds);
+                context.DrawRectangle(new VisualBrush(visual) { ViewboxUnits = BrushMappingMode.Absolute, Viewbox = bounds, Stretch = Stretch.Fill }, null, bounds);
+            }
+            bitmap.Render(drawing); var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
+            using var file = File.Create(Path.Combine(outputDirectory, name)); png.Save(file);
+        }
+        var layout = (Grid)window.FindName("LayoutRoot");
+        Screenshot(layout, "ui-smoke.png");
+        var details = new IndexDetailsWindow(Model) { Owner = window }; details.Show();
+        await details.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        Check(details.IsVisible && Descendants<DataGrid>(details).Any(), "Index details opens with a virtualized issue table");
+        Screenshot(details, "ui-details.png"); details.Close();
+        window.Width = 880; window.Height = 600;
+        await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        Check(Grid.GetRow((Grid)window.FindName("ExcludeFilter")) == 1 && searchButton.IsVisible && ResultsGrid.ActualHeight > 100, "Minimum window stacks filters and preserves usable results");
+        Screenshot(layout, "ui-narrow.png");
+        foreach (double scale in new[] { 1.25, 1.5 })
+        {
+            window.Width = Math.Max(1180, 900 * scale); window.Height = Math.Max(780, 640 * scale);
+            layout.LayoutTransform = new ScaleTransform(scale, scale);
+            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            var bounds = searchButton.TransformToAncestor(window).TransformBounds(new Rect(searchButton.RenderSize));
+            Check(bounds.Right <= window.ActualWidth && ResultsGrid.ActualHeight > 100, $"Layout transform {scale:P0} keeps primary controls and results visible (not physical DPI)");
+            Screenshot(window, $"ui-scale-{scale * 100:0}.png");
+        }
+        layout.LayoutTransform = Transform.Identity; window.Width = 1180; window.Height = 780;
+        await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        string switched = Path.Combine(outputDirectory, "empty-folder"); Directory.CreateDirectory(switched);
+        await Model.SwitchFolderAsync(switched);
+        Check(!Model.CanSearch && Model.Report is null && Model.Results.Count == 0, "Changing folders releases the old snapshot and results");
         return checks;
     }
 }

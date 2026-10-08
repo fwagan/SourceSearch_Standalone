@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><OutputType>WinExe</OutputType></PropertyGroup>
+  <ItemGroup><PackageReference Include="MaterialDesignThemes" Version="5.3.2" /></ItemGroup>
   <ItemGroup><ProjectReference Include="../SourceSearch.Core/SourceSearch.Core.csproj"/><ProjectReference Include="../SourceSearch.Presentation/SourceSearch.Presentation.csproj"/></ItemGroup>
 </Project>

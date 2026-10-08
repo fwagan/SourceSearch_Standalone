@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Win32;
 using SourceSearch.Core;
 using SourceSearch.Presentation;
@@ -13,14 +15,38 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var controller = new SearchController(new IndexBuilder(new FileCatalog(), new StrictTextReader()), new SearchService());
-        Model = new(controller, WorkspacePaths.IndexRoot, new WindowPresentation(this));
-        if (root is not null) Model.RootPath = root;
+        Model = new(controller, WorkspacePaths.IndexRoot, new WindowPresentation(this)) { RootPath = root ?? @"C:\Coding\Ftrans\ftrans.main" };
         DataContext = Model;
     }
-    private void ChooseFolder_Click(object sender, RoutedEventArgs e)
+    private async void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog();
-        if (dialog.ShowDialog(this) == true) Model.RootPath = dialog.FolderName;
+        if (dialog.ShowDialog(this) == true)
+            try { await Model.SwitchFolderAsync(dialog.FolderName); }
+            catch (Exception error) { MessageBox.Show(this, error.Message, "无法打开文件夹"); }
+    }
+    private async void Window_Activated(object? sender, EventArgs e)
+    {
+        if (Model is null || closed || closing is not null) return;
+        try { await Model.RefreshIdentityAsync(); }
+        catch (Exception error) { MessageBox.Show(this, error.Message, "无法读取目录信息"); }
+    }
+    private void FocusSearch_Executed(object sender, ExecutedRoutedEventArgs e) { QueryInput.Focus(); QueryInput.SelectAll(); }
+    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (FiltersGrid is null) return;
+        bool narrow = LayoutRoot.ActualWidth < 1020;
+        Grid.SetColumn(ExcludeFilter, narrow ? 0 : 1); Grid.SetRow(ExcludeFilter, narrow ? 1 : 0);
+        Grid.SetColumnSpan(IncludeFilter, narrow ? 2 : 1); Grid.SetColumnSpan(ExcludeFilter, narrow ? 2 : 1);
+        IncludeFilter.Margin = narrow ? new(0) : new(0, 0, 8, 0);
+        ExcludeFilter.Margin = narrow ? new(0, 8, 0, 0) : new(8, 0, 0, 0);
+    }
+    private void Details_Click(object sender, RoutedEventArgs e) { if (Model.HasDetails) new IndexDetailsWindow(Model) { Owner = this }.ShowDialog(); }
+    private void CopyPath_Click(object sender, RoutedEventArgs e)
+    {
+        if (ResultsGrid.SelectedItem is not ResultRow row) return;
+        try { Clipboard.SetText(row.FilePath); }
+        catch (System.Runtime.InteropServices.COMException error) { MessageBox.Show(this, error.Message, "无法复制路径"); }
     }
     public Task CloseAsync() => closing ??= CloseCoreAsync();
     private async Task CloseCoreAsync()

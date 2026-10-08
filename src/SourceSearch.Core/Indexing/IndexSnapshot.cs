@@ -11,6 +11,7 @@ public sealed class IndexSnapshot : IDisposable
     public Guid Id => Report.SnapshotId;
     public BuildReport Report { get; }
     public string DirectoryPath { get; }
+    public string SourceRoot => Manifest.SourceRoot;
     internal DirectoryReader Reader { get; }
     internal IndexSearcher Searcher { get; }
     internal IndexManifest Manifest { get; }

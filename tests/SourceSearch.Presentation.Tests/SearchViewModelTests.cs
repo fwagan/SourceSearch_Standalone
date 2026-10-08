@@ -2,6 +2,21 @@ using SourceSearch.Core.Tests;
 namespace SourceSearch.Presentation.Tests;
 public sealed class SearchViewModelTests
 {
+    private sealed class CheckpointPresentation(Action atCheckpoint) : ISearchPresentation
+    {
+        public async Task<TimeSpan> MeasureAsync(Func<Task> update, CancellationToken ct)
+        { await update(); atCheckpoint(); return TimeSpan.Zero; }
+    }
+    [Fact]
+    public async Task Published_rows_notify_empty_state_and_applied_query_before_render_checkpoint()
+    {
+        using var corpus = new TestCorpus(); corpus.Write("a.cs", "User");
+        bool boundEmpty = true; string boundLabel = "";
+        var presentation = new CheckpointPresentation(() => { Assert.False(boundEmpty); Assert.Contains("User", boundLabel); });
+        await using var model = new SearchViewModel(new(new IndexBuilder(new FileCatalog(), new StrictTextReader()), new SearchService()), Path.Combine(corpus.Root, ".index"), presentation) { RootPath = corpus.Root, QueryText = "User" };
+        model.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(model.ShowEmpty)) boundEmpty = model.ShowEmpty; if (e.PropertyName == nameof(model.AppliedLabel)) boundLabel = model.AppliedLabel; };
+        await model.BuildAsync(); await model.SearchAsync();
+    }
     private sealed class FailingPresentation : ISearchPresentation
     {
         public bool Fail { get; set; }
@@ -77,9 +92,10 @@ public sealed class SearchViewModelTests
     public async Task Failed_build_leaves_old_snapshot_searchable()
     {
         using var corpus = new TestCorpus(); corpus.Write("a.cs", "User");
-        await using var model = Create(corpus);
-        await model.BuildAsync(); model.RootPath = Path.Combine(corpus.Root, "missing");
-        await model.BuildAsync();
+        var built = await corpus.BuildAsync(); var builder = new ControlledBuilder();
+        await using var model = new SearchViewModel(new(builder, new SearchService()), Path.Combine(corpus.Root, ".index")) { RootPath = corpus.Root };
+        var first = model.BuildAsync(); builder.Calls[0].Completion.SetResult(built); await first;
+        var failed = model.BuildAsync(); builder.Calls[1].Completion.SetException(new IOException("failed rebuild")); await failed;
         Assert.Contains("建立失败", model.StatusText); Assert.True(model.CanSearch);
         model.QueryText = "User"; Assert.Single((await model.SearchAsync()).Page.Hits);
     }

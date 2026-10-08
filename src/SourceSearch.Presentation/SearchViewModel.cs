@@ -4,25 +4,28 @@ using System.Runtime.CompilerServices;
 using SourceSearch.Core;
 namespace SourceSearch.Presentation;
 
-/// <summary>Call from the owning UI context; async continuations preserve that context.</summary>
-public sealed class SearchViewModel : INotifyPropertyChanged, IAsyncDisposable
+/// <summary>Owns one selected folder. Call on the owning UI context; continuations preserve it.</summary>
+public sealed partial class SearchViewModel : INotifyPropertyChanged, IAsyncDisposable
 {
     private readonly SearchController controller;
     private readonly string indexRoot;
     private readonly ISearchPresentation presentation;
+    private readonly IWorkspaceIdentityReader identityReader;
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? buildCancellation, queryCancellation;
     private SearchCursor? cursor;
-    private long version, buildVersion;
-    private bool isBuilding, isSearching, closed;
-    private string indexedRoot = "";
+    private long version, buildVersion, workspaceVersion;
+    private bool isBuilding, isSearching, isSwitching, closed, stale;
     private string rootPath = @"C:\Coding\Ftrans\ftrans.main", queryText = "", includeText = "", excludeText = "";
-    private string statusText = "尚未建立索引。", timingText = "默认包含匹配；全字匹配使用完整单词边界。";
     private bool wholeWord, includeEnabled, excludeEnabled;
     public event PropertyChangedEventHandler? PropertyChanged;
-    public SearchViewModel(SearchController controller, string indexRoot, ISearchPresentation? presentation = null)
+    public SearchViewModel(SearchController controller, string indexRoot, ISearchPresentation? presentation = null, IWorkspaceIdentityReader? identityReader = null)
     {
-        this.controller = controller; this.indexRoot = indexRoot; this.presentation = presentation ?? new ImmediatePresentation();
+        this.controller = controller; this.indexRoot = indexRoot;
+        this.presentation = presentation ?? new ImmediatePresentation();
+        this.identityReader = identityReader ?? new WorkspaceIdentityReader();
         BuildCommand = new(() => BuildAsync(), () => CanEdit, Error);
-        SearchCommand = new(() => SearchAsync(), () => CanSearch, Error);
+        SearchCommand = new(() => SearchAsync(), () => CanSubmit, Error);
         MoreCommand = new(() => SearchAsync(true), () => CanMore, Error);
         CancelCommand = new(() => { Cancel(); return Task.CompletedTask; }, () => !closed && (isBuilding || isSearching), Error);
     }
@@ -30,110 +33,134 @@ public sealed class SearchViewModel : INotifyPropertyChanged, IAsyncDisposable
     public AsyncCommand SearchCommand { get; }
     public AsyncCommand MoreCommand { get; }
     public AsyncCommand CancelCommand { get; }
-    public string RootPath { get => rootPath; set => Set(ref rootPath, value); }
+    public string RootPath { get => rootPath; init => rootPath = NormalizePath(value); }
     public string QueryText { get => queryText; set => SetQuery(ref queryText, value); }
     public string IncludeText { get => includeText; set => SetQuery(ref includeText, value); }
     public string ExcludeText { get => excludeText; set => SetQuery(ref excludeText, value); }
     public bool WholeWord { get => wholeWord; set => SetQuery(ref wholeWord, value); }
     public bool IncludeEnabled { get => includeEnabled; set => SetQuery(ref includeEnabled, value); }
     public bool ExcludeEnabled { get => excludeEnabled; set => SetQuery(ref excludeEnabled, value); }
-    public string StatusText { get => statusText; private set => Set(ref statusText, value); }
-    public string TimingText { get => timingText; private set => Set(ref timingText, value); }
-    public bool CanEdit => !isBuilding && !closed;
-    public bool CanSearch => !isBuilding && !closed && controller.CurrentReport is not null;
-    public bool CanMore => CanSearch && !isSearching && cursor is not null && Results.Count < 1000;
-    public bool IsBuilding => isBuilding;
     public ResultCollection Results { get; } = new();
 
     public async Task BuildAsync(CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(closed, this);
-        if (isBuilding) throw new InvalidOperationException("Index is already building.");
+        if (!CanEdit) throw new InvalidOperationException("Workspace is busy.");
         string root = RootPath; long generation = ++buildVersion;
-        InvalidateQuery(); isBuilding = true; NotifyState(); StatusText = "建立索引中…";
+        workspaceVersion++; identityRefresh = null;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token);
+        buildCancellation = cancellation;
+        InvalidateQuery(); isBuilding = true; Phase = IndexPhase.Building; IndexError = ""; Progress = null; NotifyState();
         try
         {
+            var before = await identityReader.ReadAsync(root, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested(); ApplyIdentity(before);
             var progress = new Progress<BuildProgress>(value =>
             {
                 if (isBuilding && generation == buildVersion && !closed)
-                    StatusText = $"建立中：已处理 {value.FilesProcessed:N0}，已索引 {value.FilesIndexed:N0}，跳过 {value.FilesSkipped:N0}";
+                {
+                    Progress = value;
+                    PropertyChanged?.Invoke(this, new(nameof(Progress)));
+                    PropertyChanged?.Invoke(this, new(nameof(IndexSummary)));
+                }
             });
-            await controller.RebuildAsync(new(new(root, CorpusPresets.Mixed), indexRoot), progress, ct);
-            indexedRoot = root; Results.Clear(); ShowReady();
+            await controller.RebuildAsync(new(new(root, CorpusPresets.Mixed), indexRoot), progress, cancellation.Token);
+            IndexedRoot = root; IndexedIdentity = before; stale = false; ClearResults();
+            Phase = IndexPhase.Ready;
         }
-        catch (OperationCanceledException) { StatusText = "建立已取消。" + PreviousSnapshotText(); }
-        catch (Exception error) { StatusText = "建立失败：" + error.Message + PreviousSnapshotText(); }
-        finally { isBuilding = false; buildVersion++; NotifyState(); }
+        catch (OperationCanceledException) { if (!closed) { Phase = stale ? IndexPhase.Stale : IndexPhase.Cancelled; IndexError = "建立已取消。"; } }
+        catch (Exception error) { if (!closed) { Phase = stale ? IndexPhase.Stale : IndexPhase.Failed; IndexError = "建立失败：" + error.Message; } }
+        finally
+        {
+            try
+            {
+                // Also check failed/cancelled builds: HEAD may have changed while the builder ran.
+                if (!closed)
+                {
+                    var after = await identityReader.ReadAsync(root, lifetime.Token);
+                    if (!closed) ApplyIdentity(after);
+                }
+            }
+            catch (OperationCanceledException) when (closed) { }
+            finally { isBuilding = false; buildCancellation = null; buildVersion++; if (!closed) NotifyState(); }
+        }
     }
+    /// <summary>Validation entry: an explicit snapshot is not claimed to match the current Git HEAD.</summary>
     public async Task OpenSnapshotAsync(string path, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(closed, this);
-        if (isBuilding) throw new InvalidOperationException("Index is already building.");
+        if (!CanEdit) throw new InvalidOperationException("Workspace is busy.");
+        workspaceVersion++; identityRefresh = null;
         InvalidateQuery(); isBuilding = true; NotifyState();
-        try { await controller.OpenSnapshotAsync(path, ct); indexedRoot = "快照 " + path; Results.Clear(); ShowReady(); }
+        try
+        {
+            await controller.OpenSnapshotAsync(path, ct);
+            Set(ref rootPath, NormalizePath(controller.CurrentSourceRoot!), nameof(RootPath));
+            IndexedRoot = RootPath; IndexedIdentity = new(WorkspaceKind.Unknown, Error: "显式验证快照；未验证当前分支。");
+            Identity = IndexedIdentity; stale = false; Phase = IndexPhase.Ready; IndexError = ""; ClearResults();
+        }
         finally { isBuilding = false; NotifyState(); }
     }
     public async Task<SearchExecution> SearchAsync(bool more = false, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(closed, this);
-        if (!CanSearch) throw new InvalidOperationException("Index is not ready.");
+        if (!CanSubmit) throw new InvalidOperationException("Index or query is not ready.");
         if (more && !CanMore) throw new InvalidOperationException("No further UI page available.");
-        // Read effective conditions without rewriting editable/disabled filter values.
         var request = new SearchRequest(QueryText, WholeWord ? MatchMode.WholeWord : MatchMode.Contains,
             ExtensionFilter.Parse(IncludeEnabled, IncludeText, ExcludeEnabled, ExcludeText));
-        long operation = ++version;
-        var after = more ? cursor : null;
-        cursor = null;
-        isSearching = true; NotifyState();
+        long operation = ++version; var after = more ? cursor : null; cursor = null;
+        queryCancellation?.Cancel();
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.Token);
+        queryCancellation = cancellation; isSearching = true; QueryError = ""; NotifyState();
         SearchReply? reply = null;
         try
         {
             var elapsed = await presentation.MeasureAsync(async () =>
             {
-                reply = await controller.SearchAsync(request, after, Math.Min(100, more ? 1000 - Results.Count : 100), ct);
+                reply = await controller.SearchAsync(request, after, Math.Min(100, more ? 1000 - Results.Count : 100), cancellation.Token);
                 EnsureCurrent(operation, reply.RequestId);
+                AppliedRequest = request; HasPendingChanges = false;
                 Results.Publish(reply.Page.Hits.Select(ResultRow.From), more);
-            }, ct);
+                // Publish the visible result identity and empty overlay before the render checkpoint.
+                foreach (string property in new[] { nameof(ShowEmpty), nameof(AppliedRequest), nameof(AppliedLabel), nameof(AppliedDescription), nameof(HasPendingChanges), nameof(QueryHint), nameof(EmptyDescription) })
+                    PropertyChanged?.Invoke(this, new(property));
+            }, cancellation.Token);
             EnsureCurrent(operation, reply!.RequestId);
-            cursor = reply.Page.Next;
-            TimingText = $"已显示 {Results.Count:N0} 行；核心 {reply.Page.Elapsed.TotalMilliseconds:F1} ms；呈现检查点 {elapsed.TotalMilliseconds:F1} ms。" +
-                (Results.Count >= 1000 ? "已达显示上限 1000 行，不代表全部命中数。" : reply.Page.Exhausted ? "已到结果末尾。" : "可加载下一批。");
+            cursor = reply.Page.Next; LastSearchElapsed = elapsed;
             return new(reply.Page, elapsed);
         }
         catch (Exception error) when (operation != version || closed)
         { throw new OperationCanceledException("Superseded query.", error); }
-        finally { if (operation == version) { isSearching = false; NotifyState(); } }
+        catch (OperationCanceledException) { QueryError = "搜索已取消。"; throw; }
+        catch (Exception error) { QueryError = "搜索失败：" + error.Message; throw; }
+        finally
+        {
+            if (ReferenceEquals(queryCancellation, cancellation)) queryCancellation = null;
+            if (operation == version) { isSearching = false; NotifyState(); }
+        }
     }
     public void Cancel()
     {
         if (closed) return;
-        controller.Cancel(); version++; cursor = null; isSearching = false; NotifyState();
+        buildCancellation?.Cancel(); controller.Cancel(); InvalidateQuery();
+        if (!isBuilding) QueryError = "搜索已取消。";
+        NotifyState();
     }
     private void EnsureCurrent(long operation, long requestId)
-    {
-        if (closed || operation != version || requestId != controller.CurrentRequestId) throw new OperationCanceledException("Superseded query.");
-    }
+    { if (closed || operation != version || requestId != controller.CurrentRequestId) throw new OperationCanceledException("Superseded query."); }
     private void InvalidateQuery()
-    { version++; controller.CancelQuery(); cursor = null; isSearching = false; NotifyState(); }
-    private void ShowReady()
-    {
-        var report = controller.CurrentReport!;
-        StatusText = $"索引就绪：{indexedRoot}；{report.Files.Count:N0} 文件 / {report.IndexedLines:N0} 行，跳过 {report.Issues.Count:N0} 项；建立于 {report.CreatedUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}。显示上次建立索引时的内容。";
-    }
-    private string PreviousSnapshotText() => controller.CurrentReport is null ? "尚无可搜索索引。" : $"仍可搜索上次成功建立的快照：{indexedRoot}。";
-    private void Error(Exception error) { if (!closed) TimingText = "操作失败：" + error.Message; }
+    { version++; queryCancellation?.Cancel(); controller.CancelQuery(); cursor = null; isSearching = false; }
+    private void ClearResults()
+    { Results.Clear(); AppliedRequest = null; HasPendingChanges = false; QueryError = ""; LastSearchElapsed = null; cursor = null; }
+    private void Error(Exception error) { if (!closed) { QueryError = "操作失败：" + error.Message; NotifyState(); } }
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
     { if (EqualityComparer<T>.Default.Equals(field, value)) return false; field = value; PropertyChanged?.Invoke(this, new(name)); return true; }
     private void SetQuery<T>(ref T field, T value, [CallerMemberName] string? name = null)
-    { if (Set(ref field, value, name)) InvalidateQuery(); }
-    private void NotifyState()
-    {
-        foreach (string property in new[] { nameof(CanEdit), nameof(CanSearch), nameof(CanMore), nameof(IsBuilding) }) PropertyChanged?.Invoke(this, new(property));
-        BuildCommand.NotifyCanExecuteChanged(); SearchCommand.NotifyCanExecuteChanged(); MoreCommand.NotifyCanExecuteChanged(); CancelCommand.NotifyCanExecuteChanged();
-    }
+    { if (Set(ref field, value, name)) { InvalidateQuery(); HasPendingChanges = AppliedRequest is not null; QueryError = ""; NotifyState(); } }
     public async ValueTask DisposeAsync()
     {
-        closed = true; version++; cursor = null; isSearching = false; NotifyState();
+        if (closed) { await controller.DisposeAsync(); return; }
+        closed = true; workspaceVersion++; lifetime.Cancel(); InvalidateQuery(); NotifyState();
         await controller.DisposeAsync();
     }
     private sealed class ImmediatePresentation : ISearchPresentation

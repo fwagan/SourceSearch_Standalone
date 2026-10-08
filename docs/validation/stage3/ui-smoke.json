@@ -1,0 +1,30 @@
+{
+  "Passed": true,
+  "Checks": [
+    "Unbuilt folder shows empty state and disables search",
+    "Validation host loads the shared dark MaterialDesign theme",
+    "Fixture index ready",
+    "Empty query disables search command",
+    "Search button and Enter bind to the same command",
+    "A search batch publishes one collection notification",
+    "Default contains matches embedded identifiers",
+    "Whole word excludes identifier fragments, ignores case",
+    "Include/exclude filters, exclusion wins",
+    "Overlapping filters produce empty results",
+    "Empty search has a distinct results state",
+    "Disabled filter values survive interactive search",
+    "Re-enabling a stored filter applies its original value",
+    "First batch has 100 rows",
+    "UI cap stops at 1000 without claiming total",
+    "DataGrid virtualizes the 1000-row result list",
+    "Minimized window invalidates UI measurement",
+    "Visible rows highlight original match offsets",
+    "Editing preserves applied result identity and disables paging",
+    "Find command focuses and selects query text",
+    "Index details opens with a virtualized issue table",
+    "Minimum window stacks filters and preserves usable results",
+    "Layout transform 125% keeps primary controls and results visible (not physical DPI)",
+    "Layout transform 150% keeps primary controls and results visible (not physical DPI)",
+    "Changing folders releases the old snapshot and results"
+  ]
+}
