@@ -147,6 +147,7 @@ public sealed class UiSmokeRunner(MainWindow window)
         Check(busyRejected,"Deleting a cache in use is rejected");
         await Model.SwitchFolderAsync(switched);await window.CacheStore.DeleteAsync(key,default);
         Check(!(await window.CacheStore.ListAsync(default)).Any(e=>e.Key==key),"An unused selected cache can be deleted safely");
+        checks.AddRange(await ResultOpenSmoke.RunAsync(Path.Combine(Path.GetTempPath(), "SourceSearch.OpenFixture", Guid.NewGuid().ToString("N"))));
         return checks;
     }
 }

@@ -61,7 +61,7 @@
         <Button Grid.Column="3" Content="取消搜索" Command="{Binding CancelCommand}" Style="{StaticResource QuietButton}" Margin="8,-5,0,-5" Visibility="{Binding ShowQueryCancel, Converter={StaticResource VisibleWhen}}"/>
       </Grid></Border>
       <DataGrid x:Name="ResultsGrid" Grid.Row="1" ItemsSource="{Binding Results}" IsReadOnly="True" AutoGenerateColumns="False" EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" CanUserSortColumns="False" CanUserAddRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" SelectionMode="Single" SelectionUnit="FullRow">
+                VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" CanUserSortColumns="False" CanUserAddRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" SelectionMode="Single" SelectionUnit="FullRow" MouseDoubleClick="ResultsGrid_MouseDoubleClick">
         <DataGrid.ContextMenu><ContextMenu><MenuItem Header="复制完整路径" Click="CopyPath_Click"/></ContextMenu></DataGrid.ContextMenu>
         <DataGrid.Columns>
           <DataGridTextColumn Header="文件全路径" Binding="{Binding FilePath}" Width="42*"><DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="TextTrimming" Value="CharacterEllipsis"/><Setter Property="ToolTip" Value="{Binding FilePath}"/><Setter Property="Foreground" Value="{StaticResource AppMuted}"/><Setter Property="FontSize" Value="12"/></Style></DataGridTextColumn.ElementStyle></DataGridTextColumn>

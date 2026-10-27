@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,11 +12,17 @@ public partial class MainWindow : Window
 {
     private bool closed;
     private Task? closing;
+    private readonly Action<ProcessStartInfo> startFile;
+    private readonly Action<string> reportFileError;
+    private readonly Func<string, string?> resolveDefaultEditor;
     public SearchViewModel Model { get; }
     public IIndexCache? CacheStore { get; }
-    public MainWindow(string? root = null, bool enableCache = true)
+    public MainWindow(string? root = null, bool enableCache = true, Action<ProcessStartInfo>? startFile = null, Action<string>? reportFileError = null, Func<string, string?>? resolveDefaultEditor = null)
     {
         InitializeComponent();
+        this.startFile = startFile ?? (info => { using var process = Process.Start(info); });
+        this.reportFileError = reportFileError ?? (message => MessageBox.Show(this, message, "无法打开文件", MessageBoxButton.OK, MessageBoxImage.Warning));
+        this.resolveDefaultEditor = resolveDefaultEditor ?? WindowsFileAssociation.FindExecutable;
         var builder = new IndexBuilder(new FileCatalog(), new StrictTextReader());
         var identity = new WorkspaceIdentityReader();
         CacheStore = enableCache ? new IndexCache(WorkspacePaths.CacheRoot,builder,identity) : null;
@@ -53,6 +61,19 @@ public partial class MainWindow : Window
         if (ResultsGrid.SelectedItem is not ResultRow row) return;
         try { Clipboard.SetText(row.FilePath); }
         catch (System.Runtime.InteropServices.COMException error) { MessageBox.Show(this, error.Message, "无法复制路径"); }
+    }
+    private void ResultsGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || e.OriginalSource is not DependencyObject source ||
+            ItemsControl.ContainerFromElement(ResultsGrid, source) is not DataGridRow { Item: ResultRow row }) return;
+        e.Handled = true;
+        try
+        {
+            if (!File.Exists(row.FilePath)) throw new FileNotFoundException("文件不存在，可能已被移动或删除。", row.FilePath);
+            OpenResultFile(row);
+        }
+        catch (Exception error) when (error is IOException or Win32Exception or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        { reportFileError($"{row.FilePath}\n{error.Message}"); }
     }
     public Task CloseAsync() => closing ??= CloseCoreAsync();
     private async Task CloseCoreAsync()
